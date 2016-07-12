@@ -23,20 +23,7 @@
 
 *******************************************************************************/
 
-////////////////////////////////////////////////////////////////////////////////
-// UnPack/pack message to/from its object representation
-//
-ServiceManager.packMessage = function (objectName, methodName, argv)
-{
-    return JSON.stringify({'objectName': objectName,
-                           'methodName': methodName,
-                           'argv': argv});
-}
-
-ServiceManager.unpackMessage = function (message)
-{
-    return JSON.parse(message);
-}
+window.ServiceManager = {};
 
 ////////////////////////////////////////////////////////////////////////////////
 // The function is used to generate methods for JS objects at runtime.
@@ -46,9 +33,9 @@ ServiceManager.unpackMessage = function (message)
 // @param objectName By this name object has to be registered on backend.
 // @param methodName Name of object's the method to execute.
 //
-ServiceManager.generateMethod = function (objectName, methodName)
+window.ServiceManager.generateMethod = function (objectName, methodName)
 {
-    console.log("generating method '" + methodName  + "' for " + objectName);
+    console.log("Generating method '" + objectName + "::" + methodName + "()");
 
     function generateObject(objectName)
     {
@@ -59,8 +46,8 @@ ServiceManager.generateMethod = function (objectName, methodName)
             {
                 get:
                     function (target, methodName) {
-                        return function () {
-                            var callMethod = ServiceManager.generateMethod(target.objectName, methodName);
+                        return function() {
+                            var callMethod = window.ServiceManager.generateMethod(target.objectName, methodName);
                             callMethod.apply(this, arguments)
                         }
                     }
@@ -79,7 +66,7 @@ ServiceManager.generateMethod = function (objectName, methodName)
         return function (response)
         {
             console.log(response);
-            var responseObj = ServiceManager.unpackMessage(response);
+            var responseObj = JSON.parse(response);
             var result = responseObj.objectName ? generateObject(responseObj.objectName) : responseObj.value;
             passedCallback(result);
         }
@@ -98,7 +85,7 @@ ServiceManager.generateMethod = function (objectName, methodName)
                 responseStr = JSON.stringify(response);
             }
 
-            console.log("Failure: " + description + ": " + responseStr);
+            console.log("Error: " + description + ": " + responseStr);
         }
     }
 
@@ -124,16 +111,21 @@ ServiceManager.generateMethod = function (objectName, methodName)
             argv.push(arguments[i]);
         }
 
-        message = ServiceManager.packMessage(objectName, methodName, argv);
+        message = JSON.stringify({
+            'objectName': objectName,
+            'methodName': methodName,
+            'argv': argv
+        });
+
         console.log("Call from method '" + methodName + "': " + message);
 
-        ServiceManager.sendQuery({
+        window.ServiceManager.sendQuery({
             request: message,
             onSuccess: forwardResponseCallback(localCb),
             onFailure: dumpResponseCallback("Failure callback")});
     }
-};
+}
 
-// If exists used to define that ServiceManager uses async api.
-ServiceManager.version = "2.0";
-ServiceManager.getServiceForJavaScript = ServiceManager.generateMethod('ServiceManager', 'getServiceForJavaScript');
+// If exists used to define that window.ServiceManager uses async api.
+window.ServiceManager.version = "2.0";
+window.ServiceManager.getServiceForJavaScript = window.ServiceManager.generateMethod('ServiceManager', 'getServiceForJavaScript');

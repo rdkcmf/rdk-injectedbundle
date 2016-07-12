@@ -2,9 +2,10 @@
 #define JSBRIDGE_PROXY_H
 
 #include "BundleController.h"
-#include <WebKit/WKBundlePage.h>
 #include <JavaScriptCore/JSStringRef.h>
 #include <JavaScriptCore/JSValueRef.h>
+#include <WebKit/WKBundlePage.h>
+#include <WebKit/WKBundleFrame.h>
 #include <WebKit/WKString.h>
 #include <WebKit/WKType.h>
 #include <map>
@@ -46,6 +47,11 @@ public:
      */
     void onMessageFromClient(WKBundlePageRef page, WKStringRef messageName, WKTypeRef messageBody);
 
+    /**
+     * Injects JavaScript objects to window.
+     */
+    void injectObjects(WKBundlePageRef page, WKBundleFrameRef frame);
+
 private:
 
     Proxy();
@@ -73,6 +79,16 @@ private:
      * Client of the bridge.
      */
     WKBundlePageRef m_client;
+
+    /**
+     * Defines should ServiceManager be enabled or not.
+     */
+    bool m_enableServiceManager;
+
+    /**
+     * Defines if ServiceManager has been already injected.
+     */
+    bool m_processedServiceManager;
 };
 
 } // namespace JSBridge

@@ -7,8 +7,6 @@
 #include <JavaScriptCore/JSValueRef.h>
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <WebKit/WKRetainPtr.h>
-#include <WebKit/WKBundlePage.h>
-#include <WebKit/WKBundleFrame.h>
 
 #include <sstream>
 
@@ -93,13 +91,10 @@ JSValueRef queryFunc(
 
     JSRetainPtr<JSStringRef> message = adopt(getRequestFromArgument(ctx, arg, exc));
     CHECK_EXCEPTION(exc);
-
     JSValueRef succCallback = getCallbackFromArgument(ctx, arg, "onSuccess", exc);
     CHECK_EXCEPTION(exc);
-
     JSValueRef errCallback = getCallbackFromArgument(ctx, arg, "onFailure", exc);
     CHECK_EXCEPTION(exc);
-
     JSBridge::Proxy::singleton().sendQuery(
         name,
         ctx,
