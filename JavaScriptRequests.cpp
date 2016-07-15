@@ -22,58 +22,56 @@ JSValueRef createTypeErrorException(JSContextRef ctx, const char* descr, const c
 
     stream << descr << " at " << file << ", line: " << line;
     JSRetainPtr<JSStringRef> jsstr = adopt(JSStringCreateWithUTF8CString(stream.str().c_str()));
-    auto str = JSValueMakeString(ctx, jsstr.get());
 
-    return str;
+    return JSValueMakeString(ctx, jsstr.get());
 }
 
-JSValueRef getCallbackFromArgument(JSContextRef ctx, const JSValueRef argument, const char* valueName, JSValueRef* exception)
+JSValueRef getValueFromArgument(JSContextRef ctx, const JSValueRef argument, const char* name, JSValueRef* exc)
 {
-    JSObjectRef objArgument = JSValueToObject(ctx, argument, exception);
-    CHECK_EXCEPTION(exception);
+    JSObjectRef objArgument = JSValueToObject(ctx, argument, exc);
+    CHECK_EXCEPTION(exc);
 
-    JSRetainPtr<JSStringRef> reqStr = adopt(JSStringCreateWithUTF8CString(valueName));
-    JSValueRef arg = JSObjectGetProperty(ctx, objArgument, reqStr.get(), exception);
-    CHECK_EXCEPTION(exception);
+    JSRetainPtr<JSStringRef> valueRef = adopt(JSStringCreateWithUTF8CString(name));
+    JSValueRef result = JSObjectGetProperty(ctx, objArgument, valueRef.get(), exc);
+    CHECK_EXCEPTION(exc);
 
-    if (!JSValueIsObject(ctx, arg)) {
-        *exception = createTypeErrorException(ctx, "Incorrect argument passed!", __FILE__, __LINE__);
+    return result;
+}
+
+JSStringRef getStringValueFromArgument(JSContextRef ctx, const JSValueRef argument, const char* name, JSValueRef* exc)
+{
+    JSValueRef value = getValueFromArgument(ctx, argument, name, exc);
+    CHECK_EXCEPTION(exc);
+    if (!JSValueIsString(ctx, value))
+    {
+        *exc = createTypeErrorException(ctx, "Incorrect argument passed!", __FILE__, __LINE__);
         return nullptr;
     }
 
-    return arg;
+    JSStringRef result = JSValueToStringCopy(ctx, value, exc);
+    CHECK_EXCEPTION(exc);
+
+    return result;
 }
 
-JSStringRef getRequestFromArgument(JSContextRef ctx, const JSValueRef argument, JSValueRef* exception)
+JSValueRef getObjectValueFromArgument(JSContextRef ctx, const JSValueRef argument, const char* name, JSValueRef* exc)
 {
-    JSObjectRef objArgument = JSValueToObject(ctx, argument, exception);
-    CHECK_EXCEPTION(exception);
-
-    JSRetainPtr<JSStringRef> reqStr = adopt(JSStringCreateWithUTF8CString("request"));
-    JSValueRef request = JSObjectGetProperty(ctx, objArgument, reqStr.get(), exception);
-    CHECK_EXCEPTION(exception);
-
-    if (!JSValueIsString(ctx, request)) {
-        *exception = createTypeErrorException(ctx, "Incorrect argument passed!", __FILE__, __LINE__);
+    JSValueRef value = getValueFromArgument(ctx, argument, name, exc);
+    CHECK_EXCEPTION(exc);
+    if (!JSValueIsObject(ctx, value))
+    {
+        *exc = createTypeErrorException(ctx, "Incorrect argument passed!", __FILE__, __LINE__);
         return nullptr;
     }
 
-    JSStringRef ret = JSValueToStringCopy(ctx, request, exception);
-    CHECK_EXCEPTION(exception);
-
-    return ret;
+    return value;
 }
 
-JSValueRef queryFunc(
-    const char* name,
-    JSContextRef ctx,
-    JSObjectRef function,
-    JSObjectRef thisObject,
-    size_t argc,
-    const JSValueRef argv[],
-    JSValueRef* exc)
+JSValueRef getArgument(JSContextRef ctx,
+    size_t argc, const JSValueRef argv[], JSValueRef* exc)
 {
-    if (UNLIKELY(argc < 1)) {
+    if (UNLIKELY(argc < 1))
+    {
         // FIXME: is undefined the most appropriate type here?
         // FIXME: WKBundleReportException ?
         *exc = JSValueMakeUndefined(ctx);
@@ -81,28 +79,16 @@ JSValueRef queryFunc(
         return nullptr;
     }
 
-    const JSValueRef& arg = argv[0];
-    if (UNLIKELY(!JSValueIsObject(ctx, arg))) {
+    JSValueRef result = argv[0];
+    if (UNLIKELY(!JSValueIsObject(ctx, result)))
+    {
         // FIXME: is undefined the most appropriate type here?
         *exc = JSValueMakeUndefined(ctx);
 
         return nullptr;
     }
 
-    JSRetainPtr<JSStringRef> message = adopt(getRequestFromArgument(ctx, arg, exc));
-    CHECK_EXCEPTION(exc);
-    JSValueRef succCallback = getCallbackFromArgument(ctx, arg, "onSuccess", exc);
-    CHECK_EXCEPTION(exc);
-    JSValueRef errCallback = getCallbackFromArgument(ctx, arg, "onFailure", exc);
-    CHECK_EXCEPTION(exc);
-    JSBridge::Proxy::singleton().sendQuery(
-        name,
-        ctx,
-        message.get(),
-        succCallback,
-        errCallback);
-
-    return JSValueMakeUndefined(ctx);
+    return result;
 }
 
 } // namespace
@@ -112,24 +98,65 @@ namespace JSBridge
 
 JSValueRef onJavaScriptBridgeRequest(
     JSContextRef ctx,
-    JSObjectRef function,
-    JSObjectRef thisObject,
+    JSObjectRef,
+    JSObjectRef,
     size_t argc,
     const JSValueRef argv[],
     JSValueRef* exc)
 {
-    return queryFunc("onJavaScriptBridgeRequest", ctx, function, thisObject, argc, argv, exc);
+    JSValueRef arg = getArgument(ctx, argc, argv, exc);
+    if (!arg)
+    {
+        return nullptr;
+    }
+
+    JSRetainPtr<JSStringRef> message = adopt(getStringValueFromArgument(ctx, arg, "request", exc));
+    CHECK_EXCEPTION(exc);
+    JSValueRef onSuccess = getObjectValueFromArgument(ctx, arg, "onSuccess", exc);
+    CHECK_EXCEPTION(exc);
+    JSValueRef onFailure = getObjectValueFromArgument(ctx, arg, "onFailure", exc);
+    CHECK_EXCEPTION(exc);
+
+    JSBridge::Proxy::singleton().sendJavaScriptBridgeRequest(
+        ctx,
+        message.get(),
+        onSuccess,
+        onFailure);
+
+    return JSValueMakeUndefined(ctx);
 }
 
 JSValueRef onJavaScriptServiceManagerRequest(
     JSContextRef ctx,
-    JSObjectRef function,
-    JSObjectRef thisObject,
+    JSObjectRef,
+    JSObjectRef,
     size_t argc,
     const JSValueRef argv[],
     JSValueRef* exc)
 {
-    return queryFunc("onJavaScriptServiceManagerRequest", ctx, function, thisObject, argc, argv, exc);
+    JSValueRef arg = getArgument(ctx, argc, argv, exc);
+    if (!arg)
+    {
+        return nullptr;
+    }
+
+    JSRetainPtr<JSStringRef> serviceName = adopt(getStringValueFromArgument(ctx, arg, "serviceName", exc));
+    CHECK_EXCEPTION(exc);
+    JSRetainPtr<JSStringRef> message = adopt(getStringValueFromArgument(ctx, arg, "request", exc));
+    CHECK_EXCEPTION(exc);
+    JSValueRef onSuccess = getObjectValueFromArgument(ctx, arg, "onSuccess", exc);
+    CHECK_EXCEPTION(exc);
+    JSValueRef onFailure = getObjectValueFromArgument(ctx, arg, "onFailure", exc);
+    CHECK_EXCEPTION(exc);
+
+    JSBridge::Proxy::singleton().sendJavaScriptServiceManagerRequest(
+        serviceName.get(),
+        ctx,
+        message.get(),
+        onSuccess,
+        onFailure);
+
+    return JSValueMakeUndefined(ctx);
 }
 
 } // namespace JSBridge

@@ -11,7 +11,7 @@ namespace
 void didCommitLoad(WKBundlePageRef page,
     WKBundleFrameRef frame, WKTypeRef*, const void*)
 {
-    JSBridge::Proxy::singleton().injectObjects(page, frame);
+    JSBridge::Proxy::singleton().didCommitLoad(page, frame);
 }
 
 void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
@@ -20,24 +20,24 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
     WKBundlePageLoaderClientV0 client {
         {0, clientInfo},
         // Version 0.
-        0, // didStartProvisionalLoadForFrame;
-        0, // didReceiveServerRedirectForProvisionalLoadForFrame;
-        0, // didFailProvisionalLoadWithErrorForFrame;
+        nullptr, // didStartProvisionalLoadForFrame;
+        nullptr, // didReceiveServerRedirectForProvisionalLoadForFrame;
+        nullptr, // didFailProvisionalLoadWithErrorForFrame;
         didCommitLoad, // didCommitLoadForFrame;
-        0, // didFinishDocumentLoadForFrame;
-        0, // didFinishLoadForFrame;
-        0, // didFailLoadWithErrorForFrame;
-        0, // didSameDocumentNavigationForFrame;
-        0, // didReceiveTitleForFrame;
-        0, // didFirstLayoutForFrame;
-        0, // didFirstVisuallyNonEmptyLayoutForFrame;
-        0, // didRemoveFrameFromHierarchy;
-        0, // didDisplayInsecureContentForFrame;
-        0, // didRunInsecureContentForFrame;
-        0, // didClearWindowObjectForFrame;
-        0, // didCancelClientRedirectForFrame;
-        0, // willPerformClientRedirectForFrame;
-        0, // didHandleOnloadEventsForFrame;
+        nullptr, // didFinishDocumentLoadForFrame;
+        nullptr, // didFinishLoadForFrame;
+        nullptr, // didFailLoadWithErrorForFrame;
+        nullptr, // didSameDocumentNavigationForFrame;
+        nullptr, // didReceiveTitleForFrame;
+        nullptr, // didFirstLayoutForFrame;
+        nullptr, // didFirstVisuallyNonEmptyLayoutForFrame;
+        nullptr, // didRemoveFrameFromHierarchy;
+        nullptr, // didDisplayInsecureContentForFrame;
+        nullptr, // didRunInsecureContentForFrame;
+        nullptr, // didClearWindowObjectForFrame;
+        nullptr, // didCancelClientRedirectForFrame;
+        nullptr, // willPerformClientRedirectForFrame;
+        nullptr, // didHandleOnloadEventsForFrame;
     };
 
     WKBundlePageSetPageLoaderClient(page, &client.base);

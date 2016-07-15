@@ -1,12 +1,14 @@
 #include "Proxy.h"
 #include "JavaScriptRequests.h"
+#include "utils.h"
 
 #include <JavaScriptCore/JSObjectRef.h>
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <WebKit/WKArray.h>
+#include <WebKit/WKURL.h>
 #include <WebKit/WKNumber.h>
 #include <WebKit/WKRetainPtr.h>
-
+#include <WebKit/WKURLRequest.h>
 #include <fstream>
 
 namespace JSBridge
@@ -14,6 +16,8 @@ namespace JSBridge
 
 namespace
 {
+
+const char* kServiceManagerJavaScriptName = "ServiceManager";
 
 std::string toStdString(WKStringRef string)
 {
@@ -24,21 +28,21 @@ std::string toStdString(WKStringRef string)
     return std::string(buffer.get(), len - 1);
 }
 
-bool evaluateUserScript(JSContextRef context, const char* path, JSValueRef* exc)
+std::string frameURL(WKBundleFrameRef frame)
 {
-    std::ifstream file;
-    file.open(path);
-    if (!file.is_open())
-        return false;
+    WKRetainPtr<WKURLRef> copyRef = adoptWK(WKBundleFrameCopyURL(frame));
+    if (!copyRef)
+    {
+        return "";
+    }
 
-    std::string content;
-    content.assign((std::istreambuf_iterator<char>(file)),(std::istreambuf_iterator<char>()));
-    file.close();
+    WKRetainPtr<WKStringRef> urlRef = adoptWK(WKURLCopyString(copyRef.get()));
+    if (!urlRef)
+    {
+        return "";
+    }
 
-    JSRetainPtr<JSStringRef> str = adopt(JSStringCreateWithUTF8CString(content.c_str()));
-    JSEvaluateScript(context, str.get(), nullptr, nullptr, 0, exc);
-
-    return true;
+    return toStdString(urlRef.get());
 }
 
 void injectWPEQuery(WKBundlePageRef page, WKBundleFrameRef frame)
@@ -56,17 +60,17 @@ void injectWPEQuery(WKBundlePageRef page, WKBundleFrameRef frame)
 
     if (exc)
     {
-        printf("Error: Could not set property wpeQuery!\n");
+        fprintf(stderr, "Error: Could not set property wpeQuery!\n");
     }
 }
 
-void enableServiceManager(WKBundlePageRef page, WKBundleFrameRef frame, bool enable)
+bool enableServiceManager(WKBundlePageRef page, bool enable)
 {
     JSValueRef exc = 0;
+    WKBundleFrameRef frame = WKBundlePageGetMainFrame(page);
     JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(frame);
     JSObjectRef windowObject = JSContextGetGlobalObject(context);
-    JSRetainPtr<JSStringRef> serviceManagerStr = adopt(JSStringCreateWithUTF8CString("ServiceManager"));
-    JSRetainPtr<JSStringRef> sendQueryStr = adopt(JSStringCreateWithUTF8CString("sendQuery"));
+    JSRetainPtr<JSStringRef> serviceManagerStr = adopt(JSStringCreateWithUTF8CString(kServiceManagerJavaScriptName));
 
     if (!enable)
     {
@@ -75,49 +79,62 @@ void enableServiceManager(WKBundlePageRef page, WKBundleFrameRef frame, bool ena
             JSObjectDeleteProperty(context, windowObject, serviceManagerStr.get(), &exc);
             if (exc)
             {
-                printf("Error: Could not delete property ServiceManager!\n");
+                fprintf(stderr, "Error: Could not delete property ServiceManager!\n");
+                return false;
             }
         }
 
-        return;
+        return true;
     }
 
     const char* jsFile = "/usr/share/injectedbundle/ServiceManager.js";
-    if (evaluateUserScript(context, jsFile, &exc) != true)
+    std::string content;
+    if (!Utils::readFile(jsFile, content))
     {
-        printf("Error: Could not find path to user script %s!\n", jsFile);
-        return;
+        fprintf(stderr, "Error: Could not read file %s!\n", jsFile);
+        return false;
+    }
+
+    (void) Utils::evaluateUserScript(context, content, &exc);
+    if (exc)
+    {
+        fprintf(stderr, "Error: Could not evaluate user script %s!\n", jsFile);
+        return false;
     }
 
     if (exc)
     {
-        printf("Error: Could not evaluate user JavaScript!\n");
-        return;
+        fprintf(stderr, "Error: Could not evaluate user JavaScript!\n");
+        return false;
     }
 
     if (JSObjectHasProperty(context, windowObject, serviceManagerStr.get()) != true)
     {
-        printf("Error: Could not find ServiceManager object!\n");
-        return;
+        fprintf(stderr, "Error: Could not find ServiceManager object!\n");
+        return false;
     }
 
     JSValueRef smObject = JSObjectGetProperty(context, windowObject, serviceManagerStr.get(), &exc);
     if (exc)
     {
-        printf("Error: Could not get property ServiceManager!\n");
-        return;
+        fprintf(stderr, "Error: Could not get property ServiceManager!\n");
+        return false;
     }
 
+    JSRetainPtr<JSStringRef> sendQueryStr = adopt(JSStringCreateWithUTF8CString("sendQuery"));
     JSValueRef sendQueryObject = JSObjectMakeFunctionWithCallback(context,
         sendQueryStr.get(), JSBridge::onJavaScriptServiceManagerRequest);
 
-    JSObjectSetProperty(context, smObject, sendQueryStr.get(), sendQueryObject,
+    JSObjectSetProperty(context, (JSObjectRef) smObject, sendQueryStr.get(), sendQueryObject,
         kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontEnum, &exc);
 
     if (exc)
     {
-        printf("Error: Could not set property ServiceManager.sendQuery!\n");
+        fprintf(stderr, "Error: Could not set property ServiceManager.sendQuery!\n");
+        return false;
     }
+
+    return true;
 }
 
 } // namespace
@@ -148,16 +165,64 @@ struct QueryCallbacks
 Proxy::Proxy()
     : m_lastCallID(0)
     , m_enableServiceManager(false)
-    , m_processedServiceManager(false)
+    , m_didCommitLoad(false)
 {
 }
 
-void Proxy::injectObjects(WKBundlePageRef page, WKBundleFrameRef frame)
+void Proxy::processServiceManager(WKBundlePageRef page)
 {
-    JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(frame);
+    std::string url = frameURL(WKBundlePageGetMainFrame(page));
+
+    // If enableServiceManager is false, no ServiceManager object must exists
+    if (m_enableServiceManager && !m_acl.isServiceManagerAllowed(url))
+    {
+        fprintf(stdout, "%s:%d Service manager is not allowed to be used for url '%s'!\n", __func__, __LINE__, url.c_str());
+        return;
+    }
+
+    if (!enableServiceManager(page, m_enableServiceManager))
+    {
+        fprintf(stderr, "%s:%d Error: Could not %s ServiceManager manager '%s'!\n", __func__, __LINE__, m_enableServiceManager ? "enable" : "disable");
+    }
+}
+
+void Proxy::didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame)
+{
+    if (WKBundlePageGetMainFrame(page) != frame)
+    {
+        fprintf(stdout, "%s:%d Frame is not allowed to inject JavaScript window objects!\n", __func__, __LINE__);
+        return;
+    }
+
+    // Always inject wpeQuery to be visible in JavaScript.
     injectWPEQuery(page, frame);
-    enableServiceManager(page, frame, m_enableServiceManager);
-    m_processedServiceManager = true;
+    processServiceManager(page);
+    m_didCommitLoad = true;
+
+    // Sending an event to backend to notify that navigation is made
+    // and new page is going to be loaded.
+    sendMessageToClient("onNavigate", frameURL(frame).c_str());
+}
+
+void Proxy::sendJavaScriptBridgeRequest(JSContextRef ctx,
+    JSStringRef messageRef, JSValueRef onSuccess, JSValueRef onError)
+{
+    sendQuery("onJavaScriptBridgeRequest", ctx, messageRef, onSuccess, onError);
+}
+
+void Proxy::sendJavaScriptServiceManagerRequest(JSStringRef serviceNameRef,
+    JSContextRef ctx, JSStringRef messageRef, JSValueRef onSuccess, JSValueRef onError)
+{
+    std::string serviceName = toStdString(adoptWK(WKStringCreateWithJSString(serviceNameRef)).get());
+    std::string url = frameURL(WKBundleFrameForJavaScriptContext(ctx));
+
+    if (!m_acl.isServiceAllowed(serviceName, url))
+    {
+        fprintf(stdout, "%s:%d Service '%s' is not allowed for url '%s'!\n", __func__, __LINE__, serviceName.c_str(), url.c_str());
+        return;
+    }
+
+    sendQuery("onJavaScriptServiceManagerRequest", ctx, messageRef, onSuccess, onError);
 }
 
 void Proxy::sendQuery(const char* name, JSContextRef ctx,
@@ -172,42 +237,71 @@ void Proxy::sendQuery(const char* name, JSContextRef ctx,
 
     m_queries[callID].reset(cb);
 
-    sendMessageToClient(name, callID, message);
-}
-
-void Proxy::setClient(WKBundlePageRef bundle)
-{
-    m_client = bundle;
+    sendMessageToClient(name, message.c_str(), callID);
 }
 
 void Proxy::onMessageFromClient(WKBundlePageRef page, WKStringRef messageName, WKTypeRef messageBody)
 {
-    WKBundleFrameRef frame = WKBundlePageGetMainFrame(page);
-    JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(frame);
-
-    if (WKStringIsEqualToUTF8CString(messageName, "EnableServiceManager"))
+    if (WKStringIsEqualToUTF8CString(messageName, "onEnableServiceManager"))
     {
-        if (WKGetTypeID(messageBody) != WKBooleanGetTypeID())
-        {
-            fprintf(stderr, "Proxy::%s:%d Error: Message body must be boolean!\n", __FUNCTION__, __LINE__);
-            return;
-        }
-
-        m_enableServiceManager = WKBooleanGetValue((WKBooleanRef) messageBody);
-        // If document has been already processed,
-        // needs to process ServiceManager explicitly.
-        // Otherwise need to wait when the page is ready to execute JavaScript.
-        if (m_processedServiceManager)
-        {
-            enableServiceManager(page, frame, m_enableServiceManager);
-        }
-
+        onEnableServiceManager(page, messageBody);
         return;
     }
 
-    if (WKStringIsEqualToUTF8CString(messageName, "JavaScriptBridgeResponse") == false)
+    if (WKStringIsEqualToUTF8CString(messageName, "onServicesACL"))
     {
-        fprintf(stderr, "Proxy::%s:%d Error: Unknown message name!\n", __FUNCTION__, __LINE__);
+        onServicesACL(messageBody);
+        return;
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "onJavaScriptBridgeResponse"))
+    {
+        onJavaScriptBridgeResponse(page, messageBody);
+        return;
+    }
+
+    fprintf(stderr, "%s:%d Error: Unknown message name!\n", __func__, __LINE__);
+}
+
+void Proxy::onEnableServiceManager(WKBundlePageRef page, WKTypeRef messageBody)
+{
+    if (WKGetTypeID(messageBody) != WKBooleanGetTypeID())
+    {
+        fprintf(stderr, "%s:%d Error: Message body must be boolean!\n", __func__, __LINE__);
+        return;
+    }
+
+    m_enableServiceManager = WKBooleanGetValue((WKBooleanRef) messageBody);
+
+    // If document has been already processed,
+    // need to handle ServiceManager explicitly.
+    // Otherwise need to wait when the page is ready to execute JavaScript.
+    if (m_didCommitLoad)
+    {
+        processServiceManager(page);
+    }
+}
+
+void Proxy::onServicesACL(WKTypeRef messageBody)
+{
+    if (WKGetTypeID(messageBody) != WKStringGetTypeID())
+    {
+        fprintf(stderr, "%s:%d Error: Message body must be string!\n", __func__, __LINE__);
+        return;
+    }
+
+    std::string acl = toStdString((WKStringRef) messageBody);
+    if (!acl.empty() && !m_acl.set(acl))
+    {
+        fprintf(stderr, "%s:%d Error: Could not set ACL!\n", __func__, __LINE__);
+    }
+}
+
+void Proxy::onJavaScriptBridgeResponse(WKBundlePageRef page, WKTypeRef messageBody)
+{
+    if (WKGetTypeID(messageBody) != WKArrayGetTypeID())
+    {
+        fprintf(stderr, "%s:%d Error: Message body must be array!\n", __func__, __LINE__);
         return;
     }
 
@@ -215,27 +309,40 @@ void Proxy::onMessageFromClient(WKBundlePageRef page, WKStringRef messageName, W
     bool success = WKBooleanGetValue((WKBooleanRef) WKArrayGetItemAtIndex((WKArrayRef) messageBody, 1));
     std::string message = toStdString((WKStringRef) WKArrayGetItemAtIndex((WKArrayRef) messageBody, 2));
 
-    printf("Proxy::%s:%d callID=%llu succes=%d message=%s\n", __FUNCTION__, __LINE__, callID, success, message.c_str());
+    fprintf(stdout, "%s:%d callID=%llu succes=%d message=%s\n", __func__, __LINE__, callID, success, message.c_str());
 
     auto it = m_queries.find(callID);
-    if (it != m_queries.end())
+    if (it == m_queries.end())
     {
-        JSValueRef cb = success ? it->second->onSuccess : it->second->onError;
-
-        const size_t argc = 1;
-        JSValueRef argv[argc];
-        JSRetainPtr<JSStringRef> string = adopt(JSStringCreateWithUTF8CString(message.c_str()));
-        argv[0] = JSValueMakeString(context, string.get());
-        JSObjectCallAsFunction(context, (JSObjectRef) cb, nullptr, argc, argv, nullptr);
-
-        it->second->unprotect(context);
-
-        m_queries.erase(it);
+        fprintf(stderr, "%s:%d Error: callID=%llu not found\n", __func__, __LINE__, callID);
     }
-    else
-    {
-        fprintf(stderr, "Proxy::%s:%d Error: callID=%llu not found\n", __FUNCTION__, __LINE__, callID);
-    }
+
+    JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(WKBundlePageGetMainFrame(page));
+    JSValueRef cb = success ? it->second->onSuccess : it->second->onError;
+
+    const size_t argc = 1;
+    JSValueRef argv[argc];
+    JSRetainPtr<JSStringRef> string = adopt(JSStringCreateWithUTF8CString(message.c_str()));
+    argv[0] = JSValueMakeString(context, string.get());
+    (void) JSObjectCallAsFunction(context, (JSObjectRef) cb, nullptr, argc, argv, nullptr);
+
+    it->second->unprotect(context);
+
+    m_queries.erase(it);
+}
+
+void Proxy::sendMessageToClient(const char* name, const char* message, uint64_t callID)
+{
+    fprintf(stdout, "%s:%d name=%s callID=%llu message=%s\n", __func__, __LINE__, name, callID, message);
+
+    WKRetainPtr<WKStringRef> nameRef = adoptWK(WKStringCreateWithUTF8CString(name));
+    WKRetainPtr<WKUInt64Ref> callIDRef = adoptWK(WKUInt64Create(callID));
+    WKRetainPtr<WKStringRef> bodyRef = adoptWK(WKStringCreateWithUTF8CString(message));
+
+    WKTypeRef params[] = {callIDRef.get(), bodyRef.get()};
+    WKRetainPtr<WKArrayRef> arrRef = adoptWK(WKArrayCreate(params, sizeof(params)/sizeof(params[0])));
+
+    WKBundlePagePostMessage(m_client, nameRef.get(), arrRef.get());
 }
 
 Proxy& Proxy::singleton()
@@ -244,19 +351,9 @@ Proxy& Proxy::singleton()
     return singleton;
 }
 
-void Proxy::sendMessageToClient(const char* name, uint64_t callID, const std::string& message)
+void Proxy::setClient(WKBundlePageRef bundle)
 {
-    printf("Proxy::%s:%d name=%s callID=%llu message=%s\n", __FUNCTION__, __LINE__, name, callID, message.c_str());
-
-    WKRetainPtr<WKStringRef> nameRef = adoptWK(WKStringCreateWithUTF8CString(name));
-    WKRetainPtr<WKUInt64Ref> callIDRef = adoptWK(WKUInt64Create(callID));
-    WKRetainPtr<WKStringRef> bodyRef = adoptWK(WKStringCreateWithUTF8CString(message.c_str()));
-
-    const int argc = 2;
-    WKTypeRef params[argc] = {callIDRef.get(), bodyRef.get()};
-    WKRetainPtr<WKArrayRef> arrRef = adoptWK(WKArrayCreate(params, argc));
-
-    WKBundlePagePostMessage(m_client, nameRef.get(), arrRef.get());
+    m_client = bundle;
 }
 
 } // namespace WPEQuery

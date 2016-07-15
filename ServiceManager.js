@@ -41,13 +41,13 @@ window.ServiceManager.generateMethod = function (objectName, methodName)
     {
         var proxy = new Proxy(
             {
-                objectName: objectName
+                _objectName: objectName
             },
             {
                 get:
-                    function (target, methodName) {
+                    function (target, _methodName) {
+                        var callMethod = window.ServiceManager.generateMethod(target._objectName, _methodName);
                         return function() {
-                            var callMethod = window.ServiceManager.generateMethod(target.objectName, methodName);
                             callMethod.apply(this, arguments)
                         }
                     }
@@ -65,7 +65,6 @@ window.ServiceManager.generateMethod = function (objectName, methodName)
     {
         return function (response)
         {
-            console.log(response);
             var responseObj = JSON.parse(response);
             var result = responseObj.objectName ? generateObject(responseObj.objectName) : responseObj.value;
             passedCallback(result);
@@ -99,10 +98,11 @@ window.ServiceManager.generateMethod = function (objectName, methodName)
     {
         var argv = [];
         var max_idx = arguments.length - 1;
-        var localCb = dumpResponseCallback("Dummy success callback");
+        var onSuccess = dumpResponseCallback("Dummy success callback");
+        var onFailure = dumpResponseCallback("Failure callback");
         if (typeof arguments[max_idx] === 'function')
         {
-            localCb = arguments[max_idx];
+            onSuccess = arguments[max_idx];
             --max_idx;
         }
 
@@ -111,17 +111,30 @@ window.ServiceManager.generateMethod = function (objectName, methodName)
             argv.push(arguments[i]);
         }
 
+        var serviceName = objectName;
+        if (objectName == "ServiceManager" && methodName == "getServiceForJavaScript")
+        {
+            serviceName = argv.length > 0 ? argv[0] : "";
+        }
+
+        if (!serviceName)
+        {
+            onFailure("No service name provided");
+            return;
+        }
+
         message = JSON.stringify({
             'objectName': objectName,
             'methodName': methodName,
             'argv': argv
         });
 
-        console.log("Call from method '" + methodName + "': " + message);
+        console.log(message);
 
         window.ServiceManager.sendQuery({
             request: message,
-            onSuccess: forwardResponseCallback(localCb),
+            serviceName: serviceName,
+            onSuccess: forwardResponseCallback(onSuccess),
             onFailure: dumpResponseCallback("Failure callback")});
     }
 }
