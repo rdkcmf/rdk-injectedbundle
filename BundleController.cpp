@@ -1,5 +1,6 @@
 #include "BundleController.h"
 #include "Proxy.h"
+#include "AVESupport.h"
 
 #include <WebKit/WKBundlePage.h>
 #include <WebKit/WKBundleFrame.h>
@@ -41,6 +42,8 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
     };
 
     WKBundlePageSetPageLoaderClient(page, &client.base);
+
+    AVESupport::onCreatePage(page);
 }
 
 void didReceiveMessageToPage(WKBundleRef,

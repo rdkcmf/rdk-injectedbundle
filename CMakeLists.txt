@@ -6,13 +6,29 @@ set(ComcastBundle_SOURCES
       Proxy.cpp
       JavaScriptRequests.cpp
       ServicesACL.cpp
+      AVESupport.cpp
     )
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GLIB REQUIRED glib-2.0)
+include_directories(${GLIB_INCLUDE_DIRS})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 add_library(ComcastBundle SHARED
     ${ComcastBundle_SOURCES}
 )
+
+set(AVE_LIBRARIES
+  -Wl,--no-as-needed
+  -lavemedia -lfaxportingkit
+  -ljsbindings-jspsdk -lkernel -lxmlreader -ltinyxml2
+  -lcrypto -lcryptoModule -lxmlreader -ltinyxml2 -ldl
+  -lAVEPlayer -lpsdk -ltrace -lAVEnexusMgr -lnexus -lcrypto -lssl -lcurl
+  -lds -ldshalcli -ldl -lm -lIARMBus
+)
+
+target_link_libraries(ComcastBundle "${GLIB_LIBRARIES}" ${AVE_LIBRARIES})
 
 install(TARGETS ComcastBundle LIBRARY DESTINATION lib)
 install(FILES *.js DESTINATION share/injectedbundle)
