@@ -5,7 +5,6 @@ set(ComcastBundle_SOURCES
       BundleController.cpp
       Proxy.cpp
       JavaScriptRequests.cpp
-      ServicesACL.cpp
       AVESupport.cpp
     )
 

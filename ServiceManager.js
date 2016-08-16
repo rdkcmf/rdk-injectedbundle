@@ -111,18 +111,6 @@ window.ServiceManager.generateMethod = function (objectName, methodName)
             argv.push(arguments[i]);
         }
 
-        var serviceName = objectName;
-        if (objectName == "ServiceManager" && methodName == "getServiceForJavaScript")
-        {
-            serviceName = argv.length > 0 ? argv[0] : "";
-        }
-
-        if (!serviceName)
-        {
-            onFailure("No service name provided");
-            return;
-        }
-
         message = JSON.stringify({
             'objectName': objectName,
             'methodName': methodName,
@@ -133,7 +121,6 @@ window.ServiceManager.generateMethod = function (objectName, methodName)
 
         window.ServiceManager.sendQuery({
             request: message,
-            serviceName: serviceName,
             onSuccess: forwardResponseCallback(onSuccess),
             onFailure: dumpResponseCallback("Failure callback")});
     }

@@ -91,6 +91,32 @@ JSValueRef getArgument(JSContextRef ctx,
     return result;
 }
 
+JSValueRef sendQuery(const char* name, JSContextRef ctx,
+    size_t argc, const JSValueRef argv[], JSValueRef* exc)
+{
+    JSValueRef arg = getArgument(ctx, argc, argv, exc);
+    if (!arg)
+    {
+        return nullptr;
+    }
+
+    JSRetainPtr<JSStringRef> message = adopt(getStringValueFromArgument(ctx, arg, "request", exc));
+    CHECK_EXCEPTION(exc);
+    JSValueRef onSuccess = getObjectValueFromArgument(ctx, arg, "onSuccess", exc);
+    CHECK_EXCEPTION(exc);
+    JSValueRef onFailure = getObjectValueFromArgument(ctx, arg, "onFailure", exc);
+    CHECK_EXCEPTION(exc);
+
+    JSBridge::Proxy::singleton().sendQuery(
+        name,
+        ctx,
+        message.get(),
+        onSuccess,
+        onFailure);
+
+    return JSValueMakeUndefined(ctx);
+}
+
 } // namespace
 
 namespace JSBridge
@@ -104,26 +130,7 @@ JSValueRef onJavaScriptBridgeRequest(
     const JSValueRef argv[],
     JSValueRef* exc)
 {
-    JSValueRef arg = getArgument(ctx, argc, argv, exc);
-    if (!arg)
-    {
-        return nullptr;
-    }
-
-    JSRetainPtr<JSStringRef> message = adopt(getStringValueFromArgument(ctx, arg, "request", exc));
-    CHECK_EXCEPTION(exc);
-    JSValueRef onSuccess = getObjectValueFromArgument(ctx, arg, "onSuccess", exc);
-    CHECK_EXCEPTION(exc);
-    JSValueRef onFailure = getObjectValueFromArgument(ctx, arg, "onFailure", exc);
-    CHECK_EXCEPTION(exc);
-
-    JSBridge::Proxy::singleton().sendJavaScriptBridgeRequest(
-        ctx,
-        message.get(),
-        onSuccess,
-        onFailure);
-
-    return JSValueMakeUndefined(ctx);
+    return sendQuery("onJavaScriptBridgeRequest", ctx, argc, argv, exc);
 }
 
 JSValueRef onJavaScriptServiceManagerRequest(
@@ -134,29 +141,7 @@ JSValueRef onJavaScriptServiceManagerRequest(
     const JSValueRef argv[],
     JSValueRef* exc)
 {
-    JSValueRef arg = getArgument(ctx, argc, argv, exc);
-    if (!arg)
-    {
-        return nullptr;
-    }
-
-    JSRetainPtr<JSStringRef> serviceName = adopt(getStringValueFromArgument(ctx, arg, "serviceName", exc));
-    CHECK_EXCEPTION(exc);
-    JSRetainPtr<JSStringRef> message = adopt(getStringValueFromArgument(ctx, arg, "request", exc));
-    CHECK_EXCEPTION(exc);
-    JSValueRef onSuccess = getObjectValueFromArgument(ctx, arg, "onSuccess", exc);
-    CHECK_EXCEPTION(exc);
-    JSValueRef onFailure = getObjectValueFromArgument(ctx, arg, "onFailure", exc);
-    CHECK_EXCEPTION(exc);
-
-    JSBridge::Proxy::singleton().sendJavaScriptServiceManagerRequest(
-        serviceName.get(),
-        ctx,
-        message.get(),
-        onSuccess,
-        onFailure);
-
-    return JSValueMakeUndefined(ctx);
+    return sendQuery("onJavaScriptServiceManagerRequest", ctx, argc, argv, exc);
 }
 
 } // namespace JSBridge
