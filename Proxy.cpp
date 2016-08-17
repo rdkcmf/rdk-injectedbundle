@@ -315,6 +315,7 @@ void Proxy::onJavaScriptBridgeResponse(WKBundlePageRef page, WKTypeRef messageBo
     if (it == m_queries.end())
     {
         fprintf(stderr, "%s:%d Error: callID=%llu not found\n", __func__, __LINE__, callID);
+        return;
     }
 
     JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(WKBundlePageGetMainFrame(page));
