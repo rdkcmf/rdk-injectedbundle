@@ -9,10 +9,16 @@
 namespace
 {
 
+void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef frame, WKTypeRef*, const void *)
+{
+    AVESupport::didStartProvisionalLoadForFrame(page, frame);
+}
+
 void didCommitLoad(WKBundlePageRef page,
     WKBundleFrameRef frame, WKTypeRef*, const void*)
 {
     JSBridge::Proxy::singleton().didCommitLoad(page, frame);
+    AVESupport::didCommitLoad(page, frame);
 }
 
 void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
@@ -21,7 +27,7 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
     WKBundlePageLoaderClientV0 client {
         {0, clientInfo},
         // Version 0.
-        nullptr, // didStartProvisionalLoadForFrame;
+        didStartProvisionalLoadForFrame, // didStartProvisionalLoadForFrame;
         nullptr, // didReceiveServerRedirectForProvisionalLoadForFrame;
         nullptr, // didFailProvisionalLoadWithErrorForFrame;
         didCommitLoad, // didCommitLoadForFrame;
@@ -43,7 +49,7 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
 
     WKBundlePageSetPageLoaderClient(page, &client.base);
 
-    AVESupport::onCreatePage(page);
+    AVESupport::didCreatePage(page);
 }
 
 void didReceiveMessageToPage(WKBundleRef,
