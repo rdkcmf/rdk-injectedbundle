@@ -130,6 +130,7 @@ void injectUserScript(WKBundlePageRef page, const char* path)
 
 void initialize()
 {
+    printf("[InjectedBundle] initialize\n");
     if (initIARM())
     {
         enable(true); // TODO: remove to setAVEEnabled message handler
@@ -157,22 +158,36 @@ bool enabled()
     return s_wk.m_enabled;
 }
 
-void onCreatePage(WKBundlePageRef page)
+void didCreatePage(WKBundlePageRef page)
 {
     printf("[InjectedBundle] AVESupport::onCreatePage\n");
-
     injectUserScript(page, "/usr/share/injectedbundle/AVEXREReceiverBridge.js");
+    printf("[InjectedBundle] Injected AVEXREReceiverBridge.js\n");
+}
 
-    if (enabled())
+void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef frame)
+{
+    printf("[InjectedBundle] AVESupport::onDidStartProvisionalLoadForFrame\n");
+    WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(page);
+    if (mainFrame == frame)
     {
-        printf("[InjectedBundle] Injected AVEXREReceiverBridge.js\n");
-
-        WKBundleFrameRef frame = WKBundlePageGetMainFrame(page);
-        JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(frame);
-
-        loadAVEJavaScriptBindings(context);
+        JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(mainFrame); // TODO: consider using the passed frame
+        unloadAVEJavaScriptBindings(context);
     }
 }
 
+void didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame)
+{
+    printf("[InjectedBundle] AVESupport::onDidCommitLoad\n");
+    if (enabled())
+    {
+        WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(page);
+        if (mainFrame == frame)
+        {
+            JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(frame);
+            loadAVEJavaScriptBindings(context);
+        }
+    }
+}
 
 } // namespace
