@@ -28,8 +28,8 @@ extern "C" {
 #endif
 
 DLL_PUBLIC void* CreateSurface() {  return NULL; }
-DLL_PUBLIC void SetSurfacePos(void* surface, int x, int y) {}
-DLL_PUBLIC void SetSurfaceSize(void* surface, int width, int height) {}
+DLL_PUBLIC void SetSurfacePos(void*, int, int) {}
+DLL_PUBLIC void SetSurfaceSize(void*, int, int) {}
 DLL_PUBLIC void GetSurfaceScale(double *pScaleX, double *pScaleY) {
     *pScaleX = 1.0;
     *pScaleY = 1.0;
@@ -53,7 +53,7 @@ public:
         }, this);
     }
 
-    virtual PSDKErrorCode getInterface(InterfaceId id, void **retValue)
+    virtual PSDKErrorCode getInterface(InterfaceId, void **)
     {
         return kECInterfaceNotFound;
     }
