@@ -16,6 +16,8 @@ void didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame);
 
 void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef frame);
 
+void didReceiveMessageToPage(WKStringRef messageName, WKTypeRef messageBody);
+
 };
 
 #endif // AVESUPPORT_H

@@ -56,6 +56,7 @@ void didReceiveMessageToPage(WKBundleRef,
     WKBundlePageRef page, WKStringRef messageName, WKTypeRef messageBody, const void*)
 {
     JSBridge::Proxy::singleton().onMessageFromClient(page, messageName, messageBody);
+    AVESupport::didReceiveMessageToPage(messageName, messageBody);
 }
 
 } // namespace

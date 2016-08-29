@@ -1,6 +1,7 @@
 #include <WebKit/WKBundlePage.h>
 #include <WebKit/WKBundleFrame.h>
 #include <WebKit/WKString.h>
+#include <WebKit/WKNumber.h>
 #include <WebKit/WKRetainPtr.h>
 #include <WebKit/WKBundlePagePrivate.h>
 
@@ -113,6 +114,17 @@ bool initIARM()
     return s_wk.m_IARMinitialized;
 }
 
+// FIXME: this should be moved to utils.h upon renaming the namespaces in this file
+std::string toStdString(WKStringRef string)
+{
+    size_t size = WKStringGetMaximumUTF8CStringSize(string);
+    auto buffer = std::make_unique<char[]>(size);
+    size_t len = WKStringGetUTF8CString(string, buffer.get(), size);
+
+    return std::string(buffer.get(), len - 1);
+}
+
+
 void injectUserScript(WKBundlePageRef page, const char* path)
 {
     std::ifstream file;
@@ -141,7 +153,6 @@ void enable(bool on = true)
 {
     if (on)
     {
-        // RFU: will be used by setAVEEnable
         if (!s_wk.m_IARMinitialized)
         {
             printf("[InjectedBundle] [ERROR] Can't enable AVE : IARM is not initialized\n");
@@ -152,7 +163,6 @@ void enable(bool on = true)
     s_wk.m_enabled = on;
 }
 
-// RFU
 bool enabled()
 {
     return s_wk.m_enabled;
@@ -169,9 +179,10 @@ void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef fram
 {
     printf("[InjectedBundle] AVESupport::onDidStartProvisionalLoadForFrame\n");
     WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(page);
+    // we don't check for enabled() on purpose here
     if (mainFrame == frame)
     {
-        JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(mainFrame); // TODO: consider using the passed frame
+        JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(mainFrame);
         unloadAVEJavaScriptBindings(context);
     }
 }
@@ -187,6 +198,53 @@ void didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame)
             JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(frame);
             loadAVEJavaScriptBindings(context);
         }
+    }
+}
+
+void onSetAVESessionToken(WKTypeRef messageBody)
+{
+    //TODO: handle the session token; meanwhile just print it
+    printf("\n[InjectedBundle] setAVESessionToken arrived:\n");
+    if (WKGetTypeID(messageBody) != WKStringGetTypeID())
+    {
+        fprintf(stderr, "%s:%d ERROR: setAVESessionToken param must be a string\n", __func__, __LINE__);
+        return;
+    }
+
+    std::string token = toStdString((WKStringRef) messageBody);
+    if (token.empty())
+    {
+        fprintf(stderr, "%s:%d ERROR: an empty AVE token was passed to the injected bundle\n", __func__, __LINE__);
+        return;
+    }
+
+    printf("[InjectedBundle]%s\n", token.c_str());
+}
+
+void onSetAVEEnabled(WKTypeRef messageBody)
+{
+    printf("\n[InjectedBundle] setAVEEnabled arrived:\n");
+    if (WKGetTypeID(messageBody) != WKBooleanGetTypeID())
+    {
+        fprintf(stderr, "%s:%d ERROR: onSetAVEEnabled: unexpected param type\n", __func__, __LINE__);
+        return;
+    }
+    bool enableAVE = WKBooleanGetValue((WKBooleanRef) messageBody);
+    enable(enableAVE);
+    printf("\n[InjectedBundle] AVE was %s\n", enableAVE ? "enabled" : "disabled");
+}
+
+void didReceiveMessageToPage(WKStringRef messageName, WKTypeRef messageBody)
+{
+    if (WKStringIsEqualToUTF8CString(messageName, "setAVESessionToken"))
+    {
+        onSetAVESessionToken(messageBody);
+        return;
+    }
+    if (WKStringIsEqualToUTF8CString(messageName, "setAVEEnabled"))
+    {
+        onSetAVEEnabled(messageBody);
+        return;
     }
 }
 
