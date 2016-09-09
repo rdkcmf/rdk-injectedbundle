@@ -77,6 +77,7 @@ extern "C"
 {
     void loadAVEJavaScriptBindings(void* context);
     void unloadAVEJavaScriptBindings(void* context);
+    void setComcastSessionToken(const char* token);
 }
 
 namespace AVESupport
@@ -203,7 +204,6 @@ void didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame)
 
 void onSetAVESessionToken(WKTypeRef messageBody)
 {
-    //TODO: handle the session token; meanwhile just print it
     printf("\n[InjectedBundle] setAVESessionToken arrived:\n");
     if (WKGetTypeID(messageBody) != WKStringGetTypeID())
     {
@@ -217,6 +217,8 @@ void onSetAVESessionToken(WKTypeRef messageBody)
         fprintf(stderr, "%s:%d ERROR: an empty AVE token was passed to the injected bundle\n", __func__, __LINE__);
         return;
     }
+
+    setComcastSessionToken(token.c_str());
 
     printf("[InjectedBundle]%s\n", token.c_str());
 }
