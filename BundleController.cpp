@@ -55,8 +55,12 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
 void didReceiveMessageToPage(WKBundleRef,
     WKBundlePageRef page, WKStringRef messageName, WKTypeRef messageBody, const void*)
 {
+
+    if (AVESupport::didReceiveMessageToPage(messageName, messageBody))
+    {
+        return;
+    }
     JSBridge::Proxy::singleton().onMessageFromClient(page, messageName, messageBody);
-    AVESupport::didReceiveMessageToPage(messageName, messageBody);
 }
 
 } // namespace

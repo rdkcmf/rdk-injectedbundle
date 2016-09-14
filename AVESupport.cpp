@@ -236,18 +236,19 @@ void onSetAVEEnabled(WKTypeRef messageBody)
     printf("\n[InjectedBundle] AVE was %s\n", enableAVE ? "enabled" : "disabled");
 }
 
-void didReceiveMessageToPage(WKStringRef messageName, WKTypeRef messageBody)
+bool didReceiveMessageToPage(WKStringRef messageName, WKTypeRef messageBody)
 {
     if (WKStringIsEqualToUTF8CString(messageName, "setAVESessionToken"))
     {
         onSetAVESessionToken(messageBody);
-        return;
+        return true;
     }
     if (WKStringIsEqualToUTF8CString(messageName, "setAVEEnabled"))
     {
         onSetAVEEnabled(messageBody);
-        return;
+        return true;
     }
+    return false;
 }
 
 } // namespace
