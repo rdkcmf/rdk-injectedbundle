@@ -102,12 +102,12 @@ bool initIARM()
     {
         device::Manager::Initialize();
         s_wk.m_IARMinitialized = true;
-        printf("initIARM succeded\n");
+        printf("[InjectedBundle] AVESupport::%s:%d initIARM succeded\n", __FUNCTION__, __LINE__);
 
     }
     catch (...)
     {
-        fprintf(stderr, "IARM: Failed to initialize device::Manager\n");
+        printf("[InjectedBundle] AVESupport::%s:%d IARM: Failed to initialize device::Manager\n", __FUNCTION__, __LINE__);
         // TODO: post corresponding error message to JavaScript console
         s_wk.m_IARMinitialized = false;
     }
@@ -143,7 +143,7 @@ void injectUserScript(WKBundlePageRef page, const char* path)
 
 void initialize()
 {
-    printf("[InjectedBundle] initialize\n");
+    printf("[InjectedBundle] AVESupport::%s:%d\n", __FUNCTION__, __LINE__);
     if (initIARM())
     {
         enable(true); // TODO: remove to setAVEEnabled message handler
@@ -156,7 +156,7 @@ void enable(bool on = true)
     {
         if (!s_wk.m_IARMinitialized)
         {
-            printf("[InjectedBundle] [ERROR] Can't enable AVE : IARM is not initialized\n");
+            printf("[InjectedBundle] AVESupport::%s:%d [ERROR] Can't enable AVE : IARM is not initialized\n",  __FUNCTION__, __LINE__);
             return;
         }
     }
@@ -171,14 +171,13 @@ bool enabled()
 
 void didCreatePage(WKBundlePageRef page)
 {
-    printf("[InjectedBundle] AVESupport::onCreatePage\n");
+    printf("[InjectedBundle] AVESupport::%s:%d\n", __FUNCTION__, __LINE__);
     injectUserScript(page, "/usr/share/injectedbundle/AVEXREReceiverBridge.js");
-    printf("[InjectedBundle] Injected AVEXREReceiverBridge.js\n");
 }
 
 void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef frame)
 {
-    printf("[InjectedBundle] AVESupport::onDidStartProvisionalLoadForFrame\n");
+    printf("[InjectedBundle] AVESupport::%s:%d\n", __FUNCTION__, __LINE__);
     WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(page);
     // we don't check for enabled() on purpose here
     if (mainFrame == frame)
@@ -190,7 +189,7 @@ void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef fram
 
 void didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame)
 {
-    printf("[InjectedBundle] AVESupport::onDidCommitLoad\n");
+    printf("[InjectedBundle] AVESupport::%s:%d\n", __FUNCTION__, __LINE__);
     if (enabled())
     {
         WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(page);
@@ -204,31 +203,31 @@ void didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame)
 
 void onSetAVESessionToken(WKTypeRef messageBody)
 {
-    printf("\n[InjectedBundle] setAVESessionToken arrived:\n");
+    printf("[InjectedBundle] AVESupport::%s:%d\n", __FUNCTION__, __LINE__);
     if (WKGetTypeID(messageBody) != WKStringGetTypeID())
     {
-        fprintf(stderr, "%s:%d ERROR: setAVESessionToken param must be a string\n", __func__, __LINE__);
+        printf("[InjectedBundle] AVESupport::%s:%d [ERROR] Param must be a string.\n", __FUNCTION__, __LINE__);
         return;
     }
 
     std::string token = toStdString((WKStringRef) messageBody);
     if (token.empty())
     {
-        fprintf(stderr, "%s:%d ERROR: an empty AVE token was passed to the injected bundle\n", __func__, __LINE__);
+        printf("[InjectedBundle] AVESupport::%s:%d [ERROR] An empty AVE token was passed.\n", __FUNCTION__, __LINE__);
         return;
     }
 
     setComcastSessionToken(token.c_str());
 
-    printf("[InjectedBundle]%s\n", token.c_str());
+    printf("[InjectedBundle] token=%s\n", token.c_str());
 }
 
 void onSetAVEEnabled(WKTypeRef messageBody)
 {
-    printf("\n[InjectedBundle] setAVEEnabled arrived:\n");
+    printf("[InjectedBundle] AVESupport::%s:%d\n", __FUNCTION__, __LINE__);
     if (WKGetTypeID(messageBody) != WKBooleanGetTypeID())
     {
-        fprintf(stderr, "%s:%d ERROR: onSetAVEEnabled: unexpected param type\n", __func__, __LINE__);
+        printf("[InjectedBundle] AVESupport::%s:%d [ERROR] Unexpected param type.\n", __FUNCTION__, __LINE__);
         return;
     }
     bool enableAVE = WKBooleanGetValue((WKBooleanRef) messageBody);

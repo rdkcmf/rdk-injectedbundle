@@ -39,7 +39,7 @@ void injectWPEQuery(JSGlobalContextRef context)
 
     if (exc)
     {
-        fprintf(stderr, "Error: Could not set property wpeQuery!\n");
+        printf("[InjectedBundle] %s:%d Error: Could not set property wpeQuery!\n", __FUNCTION__, __LINE__);
     }
 }
 
@@ -52,7 +52,7 @@ void injectServiceManager(JSGlobalContextRef context)
     std::string content;
     if (!Utils::readFile(jsFile, content))
     {
-        fprintf(stderr, "Error: Could not read file %s!\n", jsFile);
+        printf("[InjectedBundle] %s:%d Error: Could not read file %s!\n", __FUNCTION__, __LINE__, jsFile);
         return;
     }
 
@@ -60,20 +60,20 @@ void injectServiceManager(JSGlobalContextRef context)
     (void) Utils::evaluateUserScript(context, content, &exc);
     if (exc)
     {
-        fprintf(stderr, "Error: Could not evaluate user script %s!\n", jsFile);
+        printf("[InjectedBundle] %s:%d Error: Could not evaluate user script %s!\n",  __FUNCTION__, __LINE__, jsFile);
         return;
     }
 
     if (JSObjectHasProperty(context, windowObject, serviceManagerStr.get()) != true)
     {
-        fprintf(stderr, "Error: Could not find ServiceManager object!\n");
+        printf("[InjectedBundle] %s:%d Error: Could not find ServiceManager object!\n",  __FUNCTION__, __LINE__);
         return;
     }
 
     JSValueRef smObject = JSObjectGetProperty(context, windowObject, serviceManagerStr.get(), &exc);
     if (exc)
     {
-        fprintf(stderr, "Error: Could not get property ServiceManager!\n");
+        printf("[InjectedBundle] %s:%d Error: Could not get property ServiceManager!\n", __FUNCTION__, __LINE__);
         return;
     }
 
@@ -86,7 +86,7 @@ void injectServiceManager(JSGlobalContextRef context)
 
     if (exc)
     {
-        fprintf(stderr, "Error: Could not set property ServiceManager.sendQuery!\n");
+        printf("[InjectedBundle] %s:%d Error: Could not set property ServiceManager.sendQuery!\n", __FUNCTION__, __LINE__);
     }
 }
 
@@ -123,7 +123,7 @@ void Proxy::didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame)
 {
     if (WKBundlePageGetMainFrame(page) != frame)
     {
-        fprintf(stdout, "%s:%d Frame is not allowed to inject JavaScript window objects!\n", __func__, __LINE__);
+        printf("[InjectedBundle] Proxy::%s:%d Frame is not allowed to inject JavaScript window objects!\n", __FUNCTION__, __LINE__);
         return;
     }
 
@@ -156,14 +156,14 @@ void Proxy::onMessageFromClient(WKBundlePageRef page, WKStringRef messageName, W
         return;
     }
 
-    fprintf(stderr, "%s:%d Error: Unknown message name!\n", __func__, __LINE__);
+    printf("[InjectedBundle] Proxy::%s:%d Error: Unknown message name!\n", __FUNCTION__, __LINE__);
 }
 
 void Proxy::onJavaScriptBridgeResponse(WKBundlePageRef page, WKTypeRef messageBody)
 {
     if (WKGetTypeID(messageBody) != WKArrayGetTypeID())
     {
-        fprintf(stderr, "%s:%d Error: Message body must be array!\n", __func__, __LINE__);
+        printf("[InjectedBundle] Proxy::%s:%d Error: Message body must be array!\n", __FUNCTION__, __LINE__);
         return;
     }
 
@@ -171,12 +171,12 @@ void Proxy::onJavaScriptBridgeResponse(WKBundlePageRef page, WKTypeRef messageBo
     bool success = WKBooleanGetValue((WKBooleanRef) WKArrayGetItemAtIndex((WKArrayRef) messageBody, 1));
     std::string message = toStdString((WKStringRef) WKArrayGetItemAtIndex((WKArrayRef) messageBody, 2));
 
-    fprintf(stdout, "%s:%d callID=%llu succes=%d message=%s\n", __func__, __LINE__, callID, success, message.c_str());
+    printf("[InjectedBundle] Proxy::%s:%d callID=%llu succes=%d message=%s\n", __FUNCTION__, __LINE__, callID, success, message.c_str());
 
     auto it = m_queries.find(callID);
     if (it == m_queries.end())
     {
-        fprintf(stderr, "%s:%d Error: callID=%llu not found\n", __func__, __LINE__, callID);
+        printf("[InjectedBundle] Proxy::%s:%d Error: callID=%llu not found\n", __FUNCTION__, __LINE__, callID);
         return;
     }
 
@@ -196,7 +196,7 @@ void Proxy::onJavaScriptBridgeResponse(WKBundlePageRef page, WKTypeRef messageBo
 
 void Proxy::sendMessageToClient(const char* name, const char* message, uint64_t callID)
 {
-    fprintf(stdout, "%s:%d name=%s callID=%llu message=%s\n", __func__, __LINE__, name, callID, message);
+    printf("[InjectedBundle] Proxy::%s:%d name=%s callID=%llu message=%s\n", __FUNCTION__, __LINE__, name, callID, message);
 
     WKRetainPtr<WKStringRef> nameRef = adoptWK(WKStringCreateWithUTF8CString(name));
     WKRetainPtr<WKUInt64Ref> callIDRef = adoptWK(WKUInt64Create(callID));
