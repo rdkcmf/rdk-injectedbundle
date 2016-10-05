@@ -6,6 +6,7 @@ set(ComcastBundle_SOURCES
       Proxy.cpp
       JavaScriptRequests.cpp
       AVESupport.cpp
+      logger.cpp
     )
 
 find_package(PkgConfig REQUIRED)
@@ -17,6 +18,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Werror")
 add_library(ComcastBundle SHARED
     ${ComcastBundle_SOURCES}
 )
+
+if(ENABLE_RDK_LOGGER)
+  add_definitions(-DUSE_RDK_LOGGER)
+  target_link_libraries(ComcastBundle "-lrdkloggers -llog4c")
+endif()
 
 set(AVE_LIBRARIES
   -Wl,--no-as-needed

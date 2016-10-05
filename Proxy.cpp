@@ -1,6 +1,7 @@
 #include "Proxy.h"
 #include "JavaScriptRequests.h"
 #include "utils.h"
+#include "logger.h"
 
 #include <JavaScriptCore/JSObjectRef.h>
 #include <JavaScriptCore/JSRetainPtr.h>
@@ -39,7 +40,7 @@ void injectWPEQuery(JSGlobalContextRef context)
 
     if (exc)
     {
-        printf("[InjectedBundle] %s:%d Error: Could not set property wpeQuery!\n", __FUNCTION__, __LINE__);
+        RDKLOG_ERROR("Could not set property wpeQuery!");
     }
 }
 
@@ -52,7 +53,7 @@ void injectServiceManager(JSGlobalContextRef context)
     std::string content;
     if (!Utils::readFile(jsFile, content))
     {
-        printf("[InjectedBundle] %s:%d Error: Could not read file %s!\n", __FUNCTION__, __LINE__, jsFile);
+        RDKLOG_ERROR("Error: Could not read file %s!", jsFile);
         return;
     }
 
@@ -60,20 +61,20 @@ void injectServiceManager(JSGlobalContextRef context)
     (void) Utils::evaluateUserScript(context, content, &exc);
     if (exc)
     {
-        printf("[InjectedBundle] %s:%d Error: Could not evaluate user script %s!\n",  __FUNCTION__, __LINE__, jsFile);
+        RDKLOG_ERROR("Could not evaluate user script %s!", jsFile);
         return;
     }
 
     if (JSObjectHasProperty(context, windowObject, serviceManagerStr.get()) != true)
     {
-        printf("[InjectedBundle] %s:%d Error: Could not find ServiceManager object!\n",  __FUNCTION__, __LINE__);
+        RDKLOG_ERROR("Could not find ServiceManager object!");
         return;
     }
 
     JSValueRef smObject = JSObjectGetProperty(context, windowObject, serviceManagerStr.get(), &exc);
     if (exc)
     {
-        printf("[InjectedBundle] %s:%d Error: Could not get property ServiceManager!\n", __FUNCTION__, __LINE__);
+        RDKLOG_ERROR("Could not get property ServiceManager!");
         return;
     }
 
@@ -86,7 +87,7 @@ void injectServiceManager(JSGlobalContextRef context)
 
     if (exc)
     {
-        printf("[InjectedBundle] %s:%d Error: Could not set property ServiceManager.sendQuery!\n", __FUNCTION__, __LINE__);
+        RDKLOG_ERROR("Could not set property ServiceManager.sendQuery!");
     }
 }
 
@@ -123,7 +124,7 @@ void Proxy::didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame)
 {
     if (WKBundlePageGetMainFrame(page) != frame)
     {
-        printf("[InjectedBundle] Proxy::%s:%d Frame is not allowed to inject JavaScript window objects!\n", __FUNCTION__, __LINE__);
+        RDKLOG_WARNING("Frame is not allowed to inject JavaScript window objects!");
         return;
     }
 
@@ -156,14 +157,14 @@ void Proxy::onMessageFromClient(WKBundlePageRef page, WKStringRef messageName, W
         return;
     }
 
-    printf("[InjectedBundle] Proxy::%s:%d Error: Unknown message name!\n", __FUNCTION__, __LINE__);
+    RDKLOG_ERROR("Unknown message name!");
 }
 
 void Proxy::onJavaScriptBridgeResponse(WKBundlePageRef page, WKTypeRef messageBody)
 {
     if (WKGetTypeID(messageBody) != WKArrayGetTypeID())
     {
-        printf("[InjectedBundle] Proxy::%s:%d Error: Message body must be array!\n", __FUNCTION__, __LINE__);
+        RDKLOG_ERROR("Message body must be array!");
         return;
     }
 
@@ -171,12 +172,12 @@ void Proxy::onJavaScriptBridgeResponse(WKBundlePageRef page, WKTypeRef messageBo
     bool success = WKBooleanGetValue((WKBooleanRef) WKArrayGetItemAtIndex((WKArrayRef) messageBody, 1));
     std::string message = toStdString((WKStringRef) WKArrayGetItemAtIndex((WKArrayRef) messageBody, 2));
 
-    printf("[InjectedBundle] Proxy::%s:%d callID=%llu succes=%d message=%s\n", __FUNCTION__, __LINE__, callID, success, message.c_str());
+    RDKLOG_INFO("callID=%llu succes=%d message='%s'", callID, success, message.c_str());
 
     auto it = m_queries.find(callID);
     if (it == m_queries.end())
     {
-        printf("[InjectedBundle] Proxy::%s:%d Error: callID=%llu not found\n", __FUNCTION__, __LINE__, callID);
+        RDKLOG_ERROR("callID=%llu not found", callID);
         return;
     }
 
@@ -196,7 +197,7 @@ void Proxy::onJavaScriptBridgeResponse(WKBundlePageRef page, WKTypeRef messageBo
 
 void Proxy::sendMessageToClient(const char* name, const char* message, uint64_t callID)
 {
-    printf("[InjectedBundle] Proxy::%s:%d name=%s callID=%llu message=%s\n", __FUNCTION__, __LINE__, name, callID, message);
+    RDKLOG_INFO("name=%s callID=%llu message=\'%s\'", name, callID, message);
 
     WKRetainPtr<WKStringRef> nameRef = adoptWK(WKStringCreateWithUTF8CString(name));
     WKRetainPtr<WKUInt64Ref> callIDRef = adoptWK(WKUInt64Create(callID));

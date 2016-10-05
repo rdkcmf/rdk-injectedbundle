@@ -1,5 +1,6 @@
 #include "BundleController.h"
 #include "AVESupport.h"
+#include "logger.h"
 
 #include <WebKit/WKBundleInitialize.h>
 
@@ -8,8 +9,7 @@
 
 extern "C" void WKBundleInitialize(WKBundleRef bundle, WKTypeRef initializationUserData)
 {
-    if (getenv("SYNC_STDOUT"))
-        setvbuf(stdout, NULL, _IOLBF, 0);
+    RDK::logger_init();
 
     JSBridge::initialize(bundle, initializationUserData);
     AVESupport::initialize();

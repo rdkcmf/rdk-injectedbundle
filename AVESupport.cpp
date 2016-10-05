@@ -8,6 +8,7 @@
 #include <dlfcn.h>
 
 #include "AVESupport.h"
+#include "logger.h"
 #include <fstream>
 
 #include <glib.h>
@@ -102,12 +103,12 @@ bool initIARM()
     {
         device::Manager::Initialize();
         s_wk.m_IARMinitialized = true;
-        printf("[InjectedBundle] AVESupport::%s:%d initIARM succeded\n", __FUNCTION__, __LINE__);
+        RDKLOG_INFO("initIARM succeded");
 
     }
     catch (...)
     {
-        printf("[InjectedBundle] AVESupport::%s:%d IARM: Failed to initialize device::Manager\n", __FUNCTION__, __LINE__);
+        RDKLOG_ERROR("IARM: Failed to initialize device::Manager");
         // TODO: post corresponding error message to JavaScript console
         s_wk.m_IARMinitialized = false;
     }
@@ -143,7 +144,7 @@ void injectUserScript(WKBundlePageRef page, const char* path)
 
 void initialize()
 {
-    printf("[InjectedBundle] AVESupport::%s:%d\n", __FUNCTION__, __LINE__);
+    RDKLOG_INFO("");
     if (initIARM())
     {
         enable(true); // TODO: remove to setAVEEnabled message handler
@@ -156,7 +157,7 @@ void enable(bool on = true)
     {
         if (!s_wk.m_IARMinitialized)
         {
-            printf("[InjectedBundle] AVESupport::%s:%d [ERROR] Can't enable AVE : IARM is not initialized\n",  __FUNCTION__, __LINE__);
+            RDKLOG_ERROR("Can't enable AVE : IARM is not initialized");
             return;
         }
     }
@@ -171,13 +172,13 @@ bool enabled()
 
 void didCreatePage(WKBundlePageRef page)
 {
-    printf("[InjectedBundle] AVESupport::%s:%d\n", __FUNCTION__, __LINE__);
+    RDKLOG_INFO("");
     injectUserScript(page, "/usr/share/injectedbundle/AVEXREReceiverBridge.js");
 }
 
 void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef frame)
 {
-    printf("[InjectedBundle] AVESupport::%s:%d\n", __FUNCTION__, __LINE__);
+    RDKLOG_INFO("");
     WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(page);
     // we don't check for enabled() on purpose here
     if (mainFrame == frame)
@@ -189,7 +190,7 @@ void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef fram
 
 void didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame)
 {
-    printf("[InjectedBundle] AVESupport::%s:%d\n", __FUNCTION__, __LINE__);
+    RDKLOG_INFO("");
     if (enabled())
     {
         WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(page);
@@ -203,36 +204,34 @@ void didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame)
 
 void onSetAVESessionToken(WKTypeRef messageBody)
 {
-    printf("[InjectedBundle] AVESupport::%s:%d\n", __FUNCTION__, __LINE__);
     if (WKGetTypeID(messageBody) != WKStringGetTypeID())
     {
-        printf("[InjectedBundle] AVESupport::%s:%d [ERROR] Param must be a string.\n", __FUNCTION__, __LINE__);
+        RDKLOG_ERROR("Param must be a string.");
         return;
     }
 
     std::string token = toStdString((WKStringRef) messageBody);
     if (token.empty())
     {
-        printf("[InjectedBundle] AVESupport::%s:%d [ERROR] An empty AVE token was passed.\n", __FUNCTION__, __LINE__);
+        RDKLOG_ERROR("An empty AVE token was passed.");
         return;
     }
 
     setComcastSessionToken(token.c_str());
 
-    printf("[InjectedBundle] token=%s\n", token.c_str());
+    RDKLOG_INFO("token=%s", token.c_str());
 }
 
 void onSetAVEEnabled(WKTypeRef messageBody)
 {
-    printf("[InjectedBundle] AVESupport::%s:%d\n", __FUNCTION__, __LINE__);
     if (WKGetTypeID(messageBody) != WKBooleanGetTypeID())
     {
-        printf("[InjectedBundle] AVESupport::%s:%d [ERROR] Unexpected param type.\n", __FUNCTION__, __LINE__);
+        RDKLOG_ERROR("Unexpected param type.");
         return;
     }
     bool enableAVE = WKBooleanGetValue((WKBooleanRef) messageBody);
     enable(enableAVE);
-    printf("\n[InjectedBundle] AVE was %s\n", enableAVE ? "enabled" : "disabled");
+    RDKLOG_INFO("AVE was %s", enableAVE ? "enabled" : "disabled");
 }
 
 bool didReceiveMessageToPage(WKStringRef messageName, WKTypeRef messageBody)
