@@ -44,8 +44,8 @@ void log(LogLevel level,
 
     va_list argptr;
     va_start(argptr, format);
-    vsprintf(userFormatted, format, argptr);
-    sprintf(finalFormatted, "%s:%s:%d %s", func,
+    vsnprintf(userFormatted, kFormatMessageSize, format, argptr);
+    snprintf(finalFormatted, kFormatMessageSize, "%s:%s:%d %s", func,
         basename(file),
         line,
         userFormatted);
@@ -92,7 +92,7 @@ void log(LogLevel level,
 
     va_list argptr;
     va_start(argptr, format);
-    vsprintf(formatted, format, argptr);
+    vsnprintf(formatted, kFormatMessageSize, format, argptr);
     va_end(argptr);
 
     char timestamp[0xFF] = {0};
