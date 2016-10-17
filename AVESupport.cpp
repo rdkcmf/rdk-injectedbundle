@@ -76,10 +76,14 @@ DLL_PUBLIC psdk::PSDKEventManager* GetPlatformCallbackManager()
 
 extern "C"
 {
+
+    typedef void (*loggerCallback)(const char* strPrefix, const AVELogLevel level, const char* logData);
+
     void loadAVEJavaScriptBindings(void* context);
     void unloadAVEJavaScriptBindings(void* context);
     void setComcastSessionToken(const char* token);
     void setCCHandleDirectMode(bool on);
+    void setPSDKLoggingCallback(loggerCallback cbLogger);
 }
 
 namespace AVESupport
@@ -117,6 +121,22 @@ bool initIARM()
     return s_wk.m_IARMinitialized;
 }
 
+void aveLogCallback(const char* strPrefix, const AVELogLevel level, const char* logData)
+{
+    RDK::LogLevel rdkLogLvl;
+    switch (level)
+    {
+        case eTrace:    rdkLogLvl = RDK::LogLevel::TRACE_LEVEL; break;
+        case eDebug:    rdkLogLvl = RDK::LogLevel::VERBOSE_LEVEL; break;
+        case eLog:      rdkLogLvl = RDK::LogLevel::INFO_LEVEL; break;
+        case eMetric:   rdkLogLvl = RDK::LogLevel::INFO_LEVEL; break;
+        case eWarning:  rdkLogLvl = RDK::LogLevel::WARNING_LEVEL; break;
+        case eError:    rdkLogLvl = RDK::LogLevel::ERROR_LEVEL; break;
+        default:        rdkLogLvl = RDK::LogLevel::ERROR_LEVEL; break;
+    }
+    _LOG(rdkLogLvl, "%s %s", strPrefix, logData);
+}
+
 // FIXME: this should be moved to utils.h upon renaming the namespaces in this file
 std::string toStdString(WKStringRef string)
 {
@@ -151,6 +171,8 @@ void initialize()
     {
         enable(true);
     }
+
+    setPSDKLoggingCallback(AVESupport::aveLogCallback);
 }
 
 void enable(bool on = true)
