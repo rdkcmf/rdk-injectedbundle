@@ -79,6 +79,7 @@ extern "C"
     void loadAVEJavaScriptBindings(void* context);
     void unloadAVEJavaScriptBindings(void* context);
     void setComcastSessionToken(const char* token);
+    void setCCHandleDirectMode(bool on);
 }
 
 namespace AVESupport
@@ -145,9 +146,10 @@ void injectUserScript(WKBundlePageRef page, const char* path)
 void initialize()
 {
     RDKLOG_INFO("");
+    setCCHandleDirectMode(true);
     if (initIARM())
     {
-        enable(true); // TODO: remove to setAVEEnabled message handler
+        enable(true);
     }
 }
 
