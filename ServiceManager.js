@@ -50,6 +50,12 @@ window.ServiceManager.generateMethod = function (objectName, methodName)
                         return function() {
                             callMethod.apply(this, arguments)
                         }
+                    },
+                set:
+                    function (target, _methodName, _value) {
+                        var callMethod = window.ServiceManager.generateMethod(target._objectName, _methodName);
+                        callMethod(_value);
+                        return true;
                     }
             });
 
