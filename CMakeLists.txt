@@ -7,6 +7,7 @@ set(ComcastBundle_SOURCES
       JavaScriptRequests.cpp
       AVESupport.cpp
       logger.cpp
+      WebFilter.cpp
     )
 
 find_package(PkgConfig REQUIRED)

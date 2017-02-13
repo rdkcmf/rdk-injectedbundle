@@ -9,6 +9,7 @@
 
 #include "AVESupport.h"
 #include "logger.h"
+#include "utils.h"
 #include <fstream>
 
 #include <glib.h>
@@ -137,17 +138,6 @@ void aveLogCallback(const char* strPrefix, const AVELogLevel level, const char* 
     _LOG(rdkLogLvl, "%s %s", strPrefix, logData);
 }
 
-// FIXME: this should be moved to utils.h upon renaming the namespaces in this file
-std::string toStdString(WKStringRef string)
-{
-    size_t size = WKStringGetMaximumUTF8CStringSize(string);
-    auto buffer = std::make_unique<char[]>(size);
-    size_t len = WKStringGetUTF8CString(string, buffer.get(), size);
-
-    return std::string(buffer.get(), len - 1);
-}
-
-
 void injectUserScript(WKBundlePageRef page, const char* path)
 {
     std::ifstream file;
@@ -234,7 +224,7 @@ void onSetAVESessionToken(WKTypeRef messageBody)
         return;
     }
 
-    std::string token = toStdString((WKStringRef) messageBody);
+    std::string token = Utils::toStdString((WKStringRef) messageBody);
     if (token.empty())
     {
         RDKLOG_ERROR("An empty AVE token was passed.");
