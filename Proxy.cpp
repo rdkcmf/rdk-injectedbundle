@@ -172,8 +172,6 @@ void Proxy::onJavaScriptBridgeResponse(WKBundlePageRef page, WKTypeRef messageBo
     bool success = WKBooleanGetValue((WKBooleanRef) WKArrayGetItemAtIndex((WKArrayRef) messageBody, 1));
     std::string message = toStdString((WKStringRef) WKArrayGetItemAtIndex((WKArrayRef) messageBody, 2));
 
-    RDKLOG_INFO("callID=%llu succes=%d message='%s'", callID, success, message.c_str());
-
     auto it = m_queries.find(callID);
     if (it == m_queries.end())
     {
@@ -197,8 +195,6 @@ void Proxy::onJavaScriptBridgeResponse(WKBundlePageRef page, WKTypeRef messageBo
 
 void Proxy::sendMessageToClient(const char* name, const char* message, uint64_t callID)
 {
-    RDKLOG_INFO("name=%s callID=%llu message=\'%s\'", name, callID, message);
-
     WKRetainPtr<WKStringRef> nameRef = adoptWK(WKStringCreateWithUTF8CString(name));
     WKRetainPtr<WKUInt64Ref> callIDRef = adoptWK(WKUInt64Create(callID));
     WKRetainPtr<WKStringRef> bodyRef = adoptWK(WKStringCreateWithUTF8CString(message));

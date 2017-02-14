@@ -128,8 +128,8 @@ void aveLogCallback(const char* strPrefix, const AVELogLevel level, const char* 
     {
         case eTrace:    rdkLogLvl = RDK::LogLevel::TRACE_LEVEL; break;
         case eDebug:    rdkLogLvl = RDK::LogLevel::VERBOSE_LEVEL; break;
-        case eLog:      rdkLogLvl = RDK::LogLevel::INFO_LEVEL; break;
-        case eMetric:   rdkLogLvl = RDK::LogLevel::INFO_LEVEL; break;
+        case eLog:      rdkLogLvl = RDK::LogLevel::VERBOSE_LEVEL; break;
+        case eMetric:   rdkLogLvl = RDK::LogLevel::VERBOSE_LEVEL; break;
         case eWarning:  rdkLogLvl = RDK::LogLevel::WARNING_LEVEL; break;
         case eError:    rdkLogLvl = RDK::LogLevel::ERROR_LEVEL; break;
         default:        rdkLogLvl = RDK::LogLevel::ERROR_LEVEL; break;
