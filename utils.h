@@ -1,15 +1,27 @@
-#ifndef JSBRIDGE_UTILS_H
-#define JSBRIDGE_UTILS_H
+#ifndef UTILS_H
+#define UTILS_H
 
 #include <JavaScriptCore/JSRetainPtr.h>
+#include <WebKit/WKString.h>
+#include <memory>
 #include <string>
 #include <fstream>
 
-namespace JSBridge
-{
 
 namespace Utils
 {
+
+/**
+ * Converts WKStringRef to std::string
+ */
+static inline std::string toStdString(WKStringRef string)
+{
+    size_t size = WKStringGetMaximumUTF8CStringSize(string);
+    auto buffer = std::make_unique<char[]>(size);
+    size_t len = WKStringGetUTF8CString(string, buffer.get(), size);
+
+    return len ? std::string(buffer.get(), len - 1) : "";
+}
 
 /**
  * Reads content of the file.
@@ -39,7 +51,5 @@ static inline JSValueRef evaluateUserScript(JSContextRef context, const std::str
 
 } // namespace Utils
 
-} // namespace JSBridge
-
-#endif // JSBRIDGE_UTILS_H
+#endif // UTILS_H
 

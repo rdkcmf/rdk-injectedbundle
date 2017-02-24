@@ -17,15 +17,6 @@ namespace JSBridge
 namespace
 {
 
-std::string toStdString(WKStringRef string)
-{
-    size_t size = WKStringGetMaximumUTF8CStringSize(string);
-    auto buffer = std::make_unique<char[]>(size);
-    size_t len = WKStringGetUTF8CString(string, buffer.get(), size);
-
-    return std::string(buffer.get(), len - 1);
-}
-
 void injectWPEQuery(JSGlobalContextRef context)
 {
     JSObjectRef windowObject = JSContextGetGlobalObject(context);
@@ -138,7 +129,7 @@ void Proxy::sendQuery(const char* name, JSContextRef ctx,
     JSStringRef messageRef, JSValueRef onSuccess, JSValueRef onError)
 {
     WKRetainPtr<WKStringRef> mesRef = adoptWK(WKStringCreateWithJSString(messageRef));
-    std::string message = toStdString(mesRef.get());
+    std::string message = Utils::toStdString(mesRef.get());
     uint64_t callID = ++m_lastCallID;
 
     auto cb = new QueryCallbacks(onSuccess, onError);
@@ -170,7 +161,7 @@ void Proxy::onJavaScriptBridgeResponse(WKBundlePageRef page, WKTypeRef messageBo
 
     uint64_t callID = WKUInt64GetValue((WKUInt64Ref) WKArrayGetItemAtIndex((WKArrayRef) messageBody, 0));
     bool success = WKBooleanGetValue((WKBooleanRef) WKArrayGetItemAtIndex((WKArrayRef) messageBody, 1));
-    std::string message = toStdString((WKStringRef) WKArrayGetItemAtIndex((WKArrayRef) messageBody, 2));
+    std::string message = Utils::toStdString((WKStringRef) WKArrayGetItemAtIndex((WKArrayRef) messageBody, 2));
 
     RDKLOG_INFO("callID=%llu succes=%d message='%s'", callID, success, message.c_str());
 

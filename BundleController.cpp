@@ -1,10 +1,12 @@
 #include "BundleController.h"
 #include "Proxy.h"
 #include "AVESupport.h"
+#include "WebFilter.h"
 
 #include <WebKit/WKBundlePage.h>
 #include <WebKit/WKBundleFrame.h>
 #include <WebKit/WKBundlePageLoaderClient.h>
+#include <WebKit/WKRetainPtr.h>
 
 namespace
 {
@@ -19,6 +21,15 @@ void didCommitLoad(WKBundlePageRef page,
 {
     JSBridge::Proxy::singleton().didCommitLoad(page, frame);
     AVESupport::didCommitLoad(page, frame);
+}
+
+WKURLRequestRef willSendRequestForFrame(WKBundlePageRef page, WKBundleFrameRef, uint64_t, WKURLRequestRef request, WKURLResponseRef, const void*)
+{
+    if (filterRequest(page, request))
+        return nullptr;
+
+    WKRetainPtr<WKURLRequestRef> newRequest = request;
+    return newRequest.leakRef();
 }
 
 void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
@@ -49,12 +60,34 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
 
     WKBundlePageSetPageLoaderClient(page, &client.base);
 
+    WKBundlePageResourceLoadClientV0 resourceLoadClient {
+        {0, clientInfo},
+        nullptr, // didInitiateLoadForResource
+        willSendRequestForFrame,
+        nullptr, // didReceiveResponseForResource
+        nullptr, // didReceiveContentLengthForResource
+        nullptr, // didFinishLoadForResource
+        nullptr // didFailLoadForResource
+    };
+
+    WKBundlePageSetResourceLoadClient(page, &resourceLoadClient.base);
+
     AVESupport::didCreatePage(page);
+}
+
+void willDestroyPage(WKBundleRef, WKBundlePageRef page, const void*)
+{
+    removeWebFiltersForPage(page);
 }
 
 void didReceiveMessageToPage(WKBundleRef,
     WKBundlePageRef page, WKStringRef messageName, WKTypeRef messageBody, const void*)
 {
+    if (WKStringIsEqualToUTF8CString(messageName, "webfilters"))
+    {
+        addWebFiltersForPage(page, messageBody);
+        return;
+    }
 
     if (AVESupport::didReceiveMessageToPage(messageName, messageBody))
     {
@@ -73,7 +106,7 @@ void initialize(WKBundleRef bundleRef, WKTypeRef)
     WKBundleClientV1 client = {
         {1, nullptr},
         didCreatePage,
-        nullptr, // willDestroyPage
+        willDestroyPage,
         nullptr, // didInitializePageGroup
         nullptr, // didReceiveMessage
         didReceiveMessageToPage
