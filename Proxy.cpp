@@ -130,12 +130,17 @@ void Proxy::sendQuery(const char* name, JSContextRef ctx,
 {
     WKRetainPtr<WKStringRef> mesRef = adoptWK(WKStringCreateWithJSString(messageRef));
     std::string message = Utils::toStdString(mesRef.get());
-    uint64_t callID = ++m_lastCallID;
 
-    auto cb = new QueryCallbacks(onSuccess, onError);
-    cb->protect(ctx);
+    uint64_t callID = 0;
+    if (!JSValueIsNull(ctx, onSuccess) || !JSValueIsNull(ctx, onError))
+    {
+        callID = ++m_lastCallID;
 
-    m_queries[callID].reset(cb);
+        auto cb = new QueryCallbacks(onSuccess, onError);
+        cb->protect(ctx);
+
+        m_queries[callID].reset(cb);
+    }
 
     sendMessageToClient(name, message.c_str(), callID);
 }
@@ -173,11 +178,14 @@ void Proxy::onJavaScriptBridgeResponse(WKBundlePageRef page, WKTypeRef messageBo
     JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(WKBundlePageGetMainFrame(page));
     JSValueRef cb = success ? it->second->onSuccess : it->second->onError;
 
-    const size_t argc = 1;
-    JSValueRef argv[argc];
-    JSRetainPtr<JSStringRef> string = adopt(JSStringCreateWithUTF8CString(message.c_str()));
-    argv[0] = JSValueMakeString(context, string.get());
-    (void) JSObjectCallAsFunction(context, (JSObjectRef) cb, nullptr, argc, argv, nullptr);
+    if (!JSValueIsNull(context, cb))
+    {
+        const size_t argc = 1;
+        JSValueRef argv[argc];
+        JSRetainPtr<JSStringRef> string = adopt(JSStringCreateWithUTF8CString(message.c_str()));
+        argv[0] = JSValueMakeString(context, string.get());
+        (void) JSObjectCallAsFunction(context, (JSObjectRef) cb, nullptr, argc, argv, nullptr);
+    }
 
     it->second->unprotect(context);
 

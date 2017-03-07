@@ -5,30 +5,28 @@ XREReceiverProto.Props = {};      // Blank local property array
 XREReceiverProto.Signals = {};      // Blank local signals array
 
 XREReceiverProto.sendToContainerApp = function (message) {
-    console.log('To Receiver: "' + JSON.stringify(message) + '"');
+    // console.log('To Receiver: "' + JSON.stringify(message) + '"');
     if (typeof window.wpeQuery !== 'undefined') {
         window.wpeQuery({
             request: JSON.stringify(message),
             persistent: false,
-            onSuccess: function (response) { },
-            onFailure: function (error_code, error_message) {
-                console.log("sendToContainerApp Failure Error: " + error_message + " (" + error_code + ")");
-            }
+            onSuccess: null,
+            onFailure: null
         });
     }
     else {
-        console.log('XREReceiverObject: window.wpeQuery is not avaliable, skipping message : "'
+        console.error('XREReceiverObject: window.wpeQuery is not avaliable, skipping message : "'
                     + JSON.stringify(message) + '"');
     }
 };
 XREReceiverProto.emit = function (signal, params) {
     try {
         var args = Array.prototype.slice.call(arguments, 1);
-        console.log("XREReceiverProto.emit " + signal + " params:" + params + " args:" + args);
+        // console.log("XREReceiverProto.emit " + signal + " params:" + params + " args:" + args);
         XREReceiverProto.Signals[signal].apply(this, args);
     }
     catch (err) {
-        console.log("emit: signal exception -> " + signal + " error = " + err);
+        console.error("emit: signal exception -> " + signal + " error = " + err);
     }
 }
 XREReceiverProto.logMessage = function (message) {

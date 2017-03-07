@@ -58,7 +58,7 @@ JSValueRef getObjectValueFromArgument(JSContextRef ctx, const JSValueRef argumen
 {
     JSValueRef value = getValueFromArgument(ctx, argument, name, exc);
     CHECK_EXCEPTION(exc);
-    if (!JSValueIsObject(ctx, value))
+    if (!JSValueIsObject(ctx, value) && !JSValueIsNull(ctx, value))
     {
         *exc = createTypeErrorException(ctx, "Incorrect argument passed!", __FILE__, __LINE__);
         return nullptr;
