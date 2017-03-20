@@ -14,7 +14,7 @@
 
 #include <glib.h>
 #include <kernel/Callbacks.h>
-#include <psdk/PSDK.h>
+#include <psdk/PSDKEvents.h>
 #include <psdkutils/PSDKError.h>
 
 #include <rdk/ds/manager.hpp>

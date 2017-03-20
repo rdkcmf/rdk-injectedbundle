@@ -26,12 +26,7 @@ if(ENABLE_RDK_LOGGER)
 endif()
 
 set(AVE_LIBRARIES
-  -Wl,--no-as-needed
-  -lavemedia -lfaxportingkit
-  -ljsbindings-jspsdk -lkernel -lxmlreader -ltinyxml2
-  -lcrypto -lcryptoModule -lxmlreader -ltinyxml2 -ldl
-  -lAVEPlayer -lpsdk -ltrace -lAVEnexusMgr -lnexus -lcrypto -lssl -lcurl
-  -lds -ldshalcli -ldl -lm -lIARMBus
+  -lAVEPlayer -lds -ldshalcli -ldl -lm -lIARMBus
 )
 
 target_link_libraries(ComcastInjectedBundle "${GLIB_LIBRARIES}" ${AVE_LIBRARIES})
