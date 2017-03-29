@@ -12,6 +12,7 @@
 #include <cassert>
 #include <unordered_map>
 #include <glib.h>
+#include <vector>
 
 
 #define CHECK_CONDITION(condition, log) \
