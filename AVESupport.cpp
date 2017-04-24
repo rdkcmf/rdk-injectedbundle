@@ -29,6 +29,7 @@
 #include "logger.h"
 #include "utils.h"
 #include <fstream>
+#include <mutex>
 
 #include <glib.h>
 #include <kernel/Callbacks.h>
@@ -102,7 +103,7 @@ extern "C"
     void unloadAVEJavaScriptBindings(void* context);
     void setComcastSessionToken(const char* token);
     void setCCHandleDirectMode(bool on);
-    void setPSDKLoggingCallback(loggerCallback cbLogger);
+    void setPSDKLoggingCallback(loggerCallback cbLogger, const AVELogLevel level);
 }
 
 namespace AVESupport
@@ -171,6 +172,14 @@ void injectUserScript(WKBundlePageRef page, const char* path)
     WKBundlePageAddUserScript(page, str.get(), kWKInjectAtDocumentStart, kWKInjectInAllFrames);
 }
 
+void installAVELoggingCallback()
+{
+    static std::once_flag flag;
+    std::call_once(flag, [] () {
+        setPSDKLoggingCallback(AVESupport::aveLogCallback, eWarning);
+    });
+}
+
 void initialize()
 {
     RDKLOG_INFO("");
@@ -179,8 +188,6 @@ void initialize()
     {
         enable(true);
     }
-
-    setPSDKLoggingCallback(AVESupport::aveLogCallback);
 }
 
 void enable(bool on = true)
@@ -230,6 +237,7 @@ void didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame)
         {
             JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(frame);
             loadAVEJavaScriptBindings(context);
+            installAVELoggingCallback();
         }
     }
 }
