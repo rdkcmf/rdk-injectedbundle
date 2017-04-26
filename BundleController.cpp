@@ -21,10 +21,13 @@
 #include "AVESupport.h"
 #include "WebFilter.h"
 
+#include <WebKit/WKBundleBackForwardList.h>
+#include <WebKit/WKBundleBackForwardListItem.h>
 #include <WebKit/WKBundlePage.h>
 #include <WebKit/WKBundleFrame.h>
 #include <WebKit/WKBundlePageLoaderClient.h>
 #include <WebKit/WKRetainPtr.h>
+#include <WebKit/WKURL.h>
 
 namespace
 {
@@ -41,6 +44,16 @@ void didCommitLoad(WKBundlePageRef page,
     AVESupport::didCommitLoad(page, frame);
 }
 
+bool shouldGoToBackForwardListItem(WKBundlePageRef page, WKBundleBackForwardListItemRef item, WKTypeRef*, const void*)
+{
+    auto backForwardList = WKBundlePageGetBackForwardList(page);
+    auto backCount = WKBundleBackForwardListGetBackListCount(backForwardList);
+    if (backCount == 1 && WKURLIsEqual(adoptWK(WKBundleBackForwardListItemCopyURL(item)).get(),
+                                       adoptWK(WKURLCreateWithUTF8CString("about:blank")).get()))
+        return false;
+    return true;
+}
+
 WKURLRequestRef willSendRequestForFrame(WKBundlePageRef page, WKBundleFrameRef, uint64_t, WKURLRequestRef request, WKURLResponseRef, const void*)
 {
     if (filterRequest(page, request))
@@ -53,8 +66,8 @@ WKURLRequestRef willSendRequestForFrame(WKBundlePageRef page, WKBundleFrameRef, 
 void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
 {
     JSBridge::Proxy::singleton().setClient(page);
-    WKBundlePageLoaderClientV0 client {
-        {0, clientInfo},
+    WKBundlePageLoaderClientV1 client {
+        {1, clientInfo},
         // Version 0.
         didStartProvisionalLoadForFrame, // didStartProvisionalLoadForFrame;
         nullptr, // didReceiveServerRedirectForProvisionalLoadForFrame;
@@ -74,6 +87,16 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
         nullptr, // didCancelClientRedirectForFrame;
         nullptr, // willPerformClientRedirectForFrame;
         nullptr, // didHandleOnloadEventsForFrame;
+
+        // Version 1.
+        nullptr, // didLayoutForFrame
+        nullptr, // didNewFirstVisuallyNonEmptyLayout_unavailable
+        nullptr, // didNewFirstVisuallyNonEmptyLayout_unavailable
+        shouldGoToBackForwardListItem,
+        nullptr, // globalObjectIsAvailableForFrame
+        nullptr, // globalObjectIsAvailableForFrame
+        nullptr, // didReconnectDOMWindowExtensionToGlobalObject
+        nullptr // willDestroyGlobalObjectForDOMWindowExtension
     };
 
     WKBundlePageSetPageLoaderClient(page, &client.base);
