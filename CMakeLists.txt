@@ -47,6 +47,11 @@ set(AVE_LIBRARIES
   -lAVEPlayer -lds -ldshalcli -ldl -lm -lIARMBus
 )
 
+if(USE_NX_CLIENT)
+  add_definitions(-DUSE_NX_CLIENT)
+  list(APPEND AVE_LIBRARIES -lnxclient)
+endif()
+
 target_link_libraries(ComcastInjectedBundle "${GLIB_LIBRARIES}" ${AVE_LIBRARIES})
 
 install(TARGETS ComcastInjectedBundle LIBRARY DESTINATION lib)

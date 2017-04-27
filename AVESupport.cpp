@@ -37,6 +37,12 @@
 #include <psdkutils/PSDKError.h>
 
 #include <rdk/ds/manager.hpp>
+
+#ifdef USE_NX_CLIENT
+#include "nexus_config.h"
+#include "nxclient.h"
+#endif
+
 extern "C" {
 
 #include <rdk/iarmbus/libIBus.h>
@@ -52,7 +58,20 @@ extern "C" {
 DLL_PUBLIC void* CreateSurface() {  return NULL; }
 DLL_PUBLIC void SetSurfacePos(void*, int, int) {}
 DLL_PUBLIC void SetSurfaceSize(void*, int, int) {}
-DLL_PUBLIC void GetSurfaceScale(double *pScaleX, double *pScaleY) {
+DLL_PUBLIC void GetSurfaceScale(double *pScaleX, double *pScaleY)
+{
+#ifdef USE_NX_CLIENT
+    // Special case for SD resolution, upscale to match the video surface size.
+    NxClient_DisplaySettings displaySettings;
+    NxClient_GetDisplaySettings(&displaySettings);
+    if (displaySettings.format == NEXUS_VideoFormat_e480p || displaySettings.format == NEXUS_VideoFormat_eNtsc)
+    {
+        *pScaleX = 1280.0 / 640.0;
+        *pScaleY = 720.0 / 480.0;
+        return;
+    }
+#endif
+
     *pScaleX = 1.0;
     *pScaleY = 1.0;
 }
