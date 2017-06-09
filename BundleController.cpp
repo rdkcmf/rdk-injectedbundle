@@ -20,6 +20,7 @@
 #include "Proxy.h"
 #include "AVESupport.h"
 #include "WebFilter.h"
+#include "RequestHeaders.h"
 
 #include <WebKit/WKBundleBackForwardList.h>
 #include <WebKit/WKBundleBackForwardListItem.h>
@@ -59,6 +60,7 @@ WKURLRequestRef willSendRequestForFrame(WKBundlePageRef page, WKBundleFrameRef, 
     if (filterRequest(page, request))
         return nullptr;
 
+    applyRequestHeaders(page, request);
     WKRetainPtr<WKURLRequestRef> newRequest = request;
     return newRequest.leakRef();
 }
@@ -119,6 +121,7 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
 void willDestroyPage(WKBundleRef, WKBundlePageRef page, const void*)
 {
     removeWebFiltersForPage(page);
+    removeRequestHeadersFromPage(page);
 }
 
 void didReceiveMessageToPage(WKBundleRef,
@@ -127,6 +130,12 @@ void didReceiveMessageToPage(WKBundleRef,
     if (WKStringIsEqualToUTF8CString(messageName, "webfilters"))
     {
         addWebFiltersForPage(page, messageBody);
+        return;
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "headers"))
+    {
+        setRequestHeadersToPage(page, messageBody);
         return;
     }
 

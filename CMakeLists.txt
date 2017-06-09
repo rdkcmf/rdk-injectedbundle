@@ -26,6 +26,7 @@ set(ComcastInjectedBundle_SOURCES
       AVESupport.cpp
       logger.cpp
       WebFilter.cpp
+      RequestHeaders.cpp
     )
 
 find_package(PkgConfig REQUIRED)
