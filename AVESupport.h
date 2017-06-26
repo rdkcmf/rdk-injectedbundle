@@ -36,6 +36,8 @@ void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef fram
 
 bool didReceiveMessageToPage(WKStringRef messageName, WKTypeRef messageBody);
 
+void setClient(WKBundlePageRef bundle);
+
 };
 
 #endif // AVESUPPORT_H

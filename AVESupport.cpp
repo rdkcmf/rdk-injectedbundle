@@ -18,6 +18,7 @@
 */
 #include <WebKit/WKBundlePage.h>
 #include <WebKit/WKBundleFrame.h>
+#include <WebKit/WKArray.h>
 #include <WebKit/WKString.h>
 #include <WebKit/WKNumber.h>
 #include <WebKit/WKRetainPtr.h>
@@ -132,8 +133,9 @@ struct AVEWk
 {
     bool m_enabled;
     bool m_IARMinitialized;
+    WKBundlePageRef m_client;
 
-    AVEWk () : m_enabled(false), m_IARMinitialized(false) {}
+    AVEWk () : m_enabled(false), m_IARMinitialized(false), m_client(nullptr) {}
 
 } s_wk;
 
@@ -160,20 +162,62 @@ bool initIARM()
     return s_wk.m_IARMinitialized;
 }
 
-void aveLogCallback(const char* strPrefix, const AVELogLevel level, const char* logData)
+
+void aveLogCallback(const char* prefix, const AVELogLevel level, const char* data)
 {
-    RDK::LogLevel rdkLogLvl;
-    switch (level)
+    if (level != eMetric || !s_wk.m_client)
     {
-        case eTrace:    rdkLogLvl = RDK::LogLevel::TRACE_LEVEL; break;
-        case eDebug:    rdkLogLvl = RDK::LogLevel::VERBOSE_LEVEL; break;
-        case eLog:      rdkLogLvl = RDK::LogLevel::VERBOSE_LEVEL; break;
-        case eMetric:   rdkLogLvl = RDK::LogLevel::VERBOSE_LEVEL; break;
-        case eWarning:  rdkLogLvl = RDK::LogLevel::WARNING_LEVEL; break;
-        case eError:    rdkLogLvl = RDK::LogLevel::ERROR_LEVEL; break;
-        default:        rdkLogLvl = RDK::LogLevel::ERROR_LEVEL; break;
+        RDK::LogLevel rdkLogLvl;
+        switch (level)
+        {
+            case eTrace:    rdkLogLvl = RDK::LogLevel::TRACE_LEVEL; break;
+            case eDebug:    rdkLogLvl = RDK::LogLevel::VERBOSE_LEVEL; break;
+            case eLog:      rdkLogLvl = RDK::LogLevel::VERBOSE_LEVEL; break;
+            case eMetric:   rdkLogLvl = RDK::LogLevel::VERBOSE_LEVEL; break;
+            case eWarning:  rdkLogLvl = RDK::LogLevel::WARNING_LEVEL; break;
+            case eError:    rdkLogLvl = RDK::LogLevel::ERROR_LEVEL; break;
+            default:        rdkLogLvl = RDK::LogLevel::ERROR_LEVEL; break;
+        }
+
+        _LOG(rdkLogLvl, "%s %s", prefix, data);
+        return;
     }
-    _LOG(rdkLogLvl, "%s %s", strPrefix, logData);
+
+    bool sendToBrowser = false;
+    if (strstr(data, "---------> Resume"))
+    {
+        sendToBrowser = true;
+    }
+    else if (strstr(data, "HttpRequestEnd") )
+    {
+        sendToBrowser = true;
+    }
+    else if (strstr(data, "TuneTime"))
+    {
+        if (strstr(data, "TuneTimeBeginLoad") ||
+           strstr(data, "TuneTimePrepareToPlay") ||
+           strstr(data, "TuneTimePlay") ||
+           strstr(data, "TuneTimeDrmReady") ||
+           strstr(data, "TuneTimeStartStream") ||
+           strstr(data, "TuneTimeStreaming") ||
+           strstr(data, "TuneTimeIsLive") )
+        {
+            sendToBrowser = true;
+        }
+    }
+
+    if (!sendToBrowser)
+        return;
+
+    WKRetainPtr<WKStringRef> nameRef = adoptWK(WKStringCreateWithUTF8CString("onAVELog"));
+    WKRetainPtr<WKStringRef> prefixRef = adoptWK(WKStringCreateWithUTF8CString(prefix));
+    WKRetainPtr<WKUInt64Ref> levelRef = adoptWK(WKUInt64Create(level));
+    WKRetainPtr<WKStringRef> dataRef = adoptWK(WKStringCreateWithUTF8CString(data));
+
+    WKTypeRef params[] = {prefixRef.get(), levelRef.get(), dataRef.get()};
+    WKRetainPtr<WKArrayRef> arrRef = adoptWK(WKArrayCreate(params, sizeof(params)/sizeof(params[0])));
+
+    WKBundlePagePostMessage(s_wk.m_client, nameRef.get(), arrRef.get());
 }
 
 void injectUserScript(WKBundlePageRef page, const char* path)
@@ -191,11 +235,16 @@ void injectUserScript(WKBundlePageRef page, const char* path)
     WKBundlePageAddUserScript(page, str.get(), kWKInjectAtDocumentStart, kWKInjectInAllFrames);
 }
 
+void setAVELogLevel(uint64_t level)
+{
+    setPSDKLoggingCallback(AVESupport::aveLogCallback, (AVELogLevel) level);
+}
+
 void installAVELoggingCallback()
 {
     static std::once_flag flag;
     std::call_once(flag, [] () {
-        setPSDKLoggingCallback(AVESupport::aveLogCallback, eWarning);
+        setAVELogLevel(eMetric);
     });
 }
 
@@ -293,6 +342,20 @@ void onSetAVEEnabled(WKTypeRef messageBody)
     RDKLOG_INFO("AVE was %s", enableAVE ? "enabled" : "disabled");
 }
 
+void onSetAVELogLevel(WKTypeRef messageBody)
+{
+    if (WKGetTypeID(messageBody) != WKUInt64GetTypeID())
+    {
+        RDKLOG_ERROR("Unexpected param type.");
+        return;
+    }
+
+    uint64_t level = WKUInt64GetValue((WKUInt64Ref) messageBody);
+
+    setAVELogLevel(level);
+    RDKLOG_INFO("[%llu]", level);
+}
+
 bool didReceiveMessageToPage(WKStringRef messageName, WKTypeRef messageBody)
 {
     if (WKStringIsEqualToUTF8CString(messageName, "setAVESessionToken"))
@@ -305,7 +368,17 @@ bool didReceiveMessageToPage(WKStringRef messageName, WKTypeRef messageBody)
         onSetAVEEnabled(messageBody);
         return true;
     }
+    if (WKStringIsEqualToUTF8CString(messageName, "setAVELogLevel"))
+    {
+        onSetAVELogLevel(messageBody);
+        return true;
+    }
     return false;
+}
+
+void setClient(WKBundlePageRef bundle)
+{
+    s_wk.m_client = bundle;
 }
 
 } // namespace

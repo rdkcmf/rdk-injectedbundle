@@ -77,6 +77,7 @@ WKURLRequestRef willSendRequestForFrame(WKBundlePageRef page, WKBundleFrameRef, 
 void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
 {
     JSBridge::Proxy::singleton().setClient(page);
+    AVESupport::setClient(page);
     WKBundlePageLoaderClientV1 client {
         {1, clientInfo},
         // Version 0.
