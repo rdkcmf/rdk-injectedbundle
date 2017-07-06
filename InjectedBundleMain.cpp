@@ -18,6 +18,7 @@
 */
 #include "BundleController.h"
 #include "AVESupport.h"
+#include "TimeZoneSupport.h"
 #include "logger.h"
 
 #include <WebKit/WKBundleInitialize.h>
@@ -31,4 +32,5 @@ extern "C" void WKBundleInitialize(WKBundleRef bundle, WKTypeRef initializationU
 
     JSBridge::initialize(bundle, initializationUserData);
     AVESupport::initialize();
+    TimeZoneSupport::initialize();
 }

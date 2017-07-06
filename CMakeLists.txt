@@ -27,13 +27,23 @@ set(ComcastInjectedBundle_SOURCES
       logger.cpp
       WebFilter.cpp
       RequestHeaders.cpp
+      TimeZoneSupport.cpp
     )
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
 include_directories(${GLIB_INCLUDE_DIRS})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -Wall -Wextra -Werror")
+set(IARM_INCLUDES
+  "-I=/usr/include/rdk/iarmmgrs/sysmgr  -I=/usr/include/rdk/iarmbus"
+)
+
+add_definitions(
+  -DUSE_UPNP_DISCOVERY=1
+  -DIARM_USE_DBUS=1
+)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -Wall -Wextra -Werror ${IARM_INCLUDES}  -z defs")
 
 add_library(ComcastInjectedBundle SHARED
     ${ComcastInjectedBundle_SOURCES}
@@ -53,7 +63,7 @@ if(USE_NX_CLIENT)
   list(APPEND AVE_LIBRARIES -lnxclient)
 endif()
 
-target_link_libraries(ComcastInjectedBundle "${GLIB_LIBRARIES}" ${AVE_LIBRARIES})
+target_link_libraries(ComcastInjectedBundle "${GLIB_LIBRARIES}" ${AVE_LIBRARIES} -ljansson -lWPEWebKit)
 
 install(TARGETS ComcastInjectedBundle LIBRARY DESTINATION lib)
 install(FILES *.js DESTINATION share/injectedbundle)
