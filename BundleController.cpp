@@ -21,6 +21,9 @@
 #include "AVESupport.h"
 #include "WebFilter.h"
 #include "RequestHeaders.h"
+#ifdef ENABLE_AAMP_JSBINDING
+#include "AAMPJSController.h"
+#endif
 
 #include <WebKit/WKBundleBackForwardList.h>
 #include <WebKit/WKBundleBackForwardListItem.h>
@@ -36,6 +39,9 @@ namespace
 void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef frame, WKTypeRef*, const void *)
 {
     AVESupport::didStartProvisionalLoadForFrame(page, frame);
+#ifdef ENABLE_AAMP_JSBINDING
+    AAMPJSController::didStartProvisionalLoadForFrame(page, frame);
+#endif
 }
 
 void didCommitLoad(WKBundlePageRef page,
@@ -43,6 +49,9 @@ void didCommitLoad(WKBundlePageRef page,
 {
     JSBridge::Proxy::singleton().didCommitLoad(page, frame);
     AVESupport::didCommitLoad(page, frame);
+#ifdef ENABLE_AAMP_JSBINDING
+    AAMPJSController::didCommitLoad(page, frame);
+#endif
 }
 
 bool shouldGoToBackForwardListItem(WKBundlePageRef page, WKBundleBackForwardListItemRef item, WKTypeRef*, const void*)
@@ -143,6 +152,14 @@ void didReceiveMessageToPage(WKBundleRef,
     {
         return;
     }
+
+#ifdef ENABLE_AAMP_JSBINDING
+    if (AAMPJSController::didReceiveMessageToPage(messageName, messageBody))
+    {
+        return;
+    }
+#endif
+
     JSBridge::Proxy::singleton().onMessageFromClient(page, messageName, messageBody);
 }
 

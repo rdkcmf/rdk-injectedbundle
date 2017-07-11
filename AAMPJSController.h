@@ -16,27 +16,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
-#include "BundleController.h"
-#include "AVESupport.h"
-#include "TimeZoneSupport.h"
-#ifdef ENABLE_AAMP_JSBINDING
-#include "AAMPJSController.h"
-#endif
-#include "logger.h"
 
-#include <WebKit/WKBundleInitialize.h>
+#ifndef AAMPJSCONTROLLER_H
+#define AAMPJSCONTROLLER_H
 
-#include <stdlib.h>
-#include <stdio.h>
-
-extern "C" void WKBundleInitialize(WKBundleRef bundle, WKTypeRef initializationUserData)
+namespace AAMPJSController
 {
-    RDK::logger_init();
 
-    JSBridge::initialize(bundle, initializationUserData);
-    AVESupport::initialize();
-    TimeZoneSupport::initialize();
-#ifdef ENABLE_AAMP_JSBINDING
-    AAMPJSController::initialize();
-#endif
-}
+void initialize();
+
+void didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame);
+
+void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef frame);
+
+bool didReceiveMessageToPage(WKStringRef messageName, WKTypeRef messageBody);
+
+};
+
+#endif // AAMPJSCONTROLLER_H
