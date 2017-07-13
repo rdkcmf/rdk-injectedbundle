@@ -30,6 +30,13 @@ set(ComcastInjectedBundle_SOURCES
       TimeZoneSupport.cpp
     )
 
+if(ENABLE_AAMP_JSBINDING)
+set(ComcastInjectedBundle_SOURCES
+      ${ComcastInjectedBundle_SOURCES}
+      AAMPJSController.cpp
+    )
+endif()
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
 include_directories(${GLIB_INCLUDE_DIRS})
@@ -57,6 +64,10 @@ endif()
 set(AVE_LIBRARIES
   -lAVEPlayer -lds -ldshalcli -ldl -lm -lIARMBus
 )
+
+if(ENABLE_AAMP_JSBINDING)
+  target_link_libraries(ComcastInjectedBundle "-laampjsbindings")
+endif()
 
 if(USE_NX_CLIENT)
   add_definitions(-DUSE_NX_CLIENT)
