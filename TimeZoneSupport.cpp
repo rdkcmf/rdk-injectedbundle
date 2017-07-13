@@ -70,6 +70,38 @@ bool getUpnpResults(char* upnpResults, unsigned int messageLength)
 typedef unordered_map<string, string> StringHash;
 typedef vector<StringHash> VectorOfMaps;
 
+void jsonProcessArray(json_t* array, VectorOfMaps& upnpDevices, int& numberOfUpnpResults)
+{
+    if(!json_is_array(array))
+    {
+        RDKLOG_ERROR("error: passed object is not an array");
+        json_decref(array);
+        return;
+    }
+
+    for(size_t i = 0; i < json_array_size(array); i++)
+    {
+        RDKLOG_TRACE("array iteration %d", i);
+        json_t *value, *object;
+        const char* key;
+
+        object = json_array_get(array, i);
+        if(!json_is_object(object))
+        {
+            RDKLOG_ERROR("error: commit data %d is not an object", i + 1);
+            continue;
+        }
+        StringHash hash;
+        json_object_foreach(object, key, value) {
+            RDKLOG_TRACE("appending %s:%s to hash", key, json_string_value(value));
+            hash[key] = json_string_value(value);
+        }
+
+        upnpDevices.push_back(hash);
+        numberOfUpnpResults++;
+    }
+}
+
 VectorOfMaps jsonToListOfMaps(const char* upnpResults)
 {
     RDKLOG_TRACE("jsonToListOfMaps");
@@ -89,37 +121,20 @@ VectorOfMaps jsonToListOfMaps(const char* upnpResults)
             RDKLOG_ERROR("JSON parsing error on line %d: %s", error.line, error.text);
             return upnpDevices;
         }
-        if(!json_is_array(root))
+
+        if (json_is_object(root))
         {
-            RDKLOG_ERROR("error: root is not an array");
-            json_decref(root);
-            return upnpDevices;
+            RDKLOG_INFO("root is an object, using the value");
+            void *iter = json_object_iter(root);
+            json_t* array = json_object_iter_value(iter);
+            jsonProcessArray(array, upnpDevices, numberOfUpnpResults);
+        } else {
+            RDKLOG_INFO("root is an array, using it");
+            jsonProcessArray(root, upnpDevices, numberOfUpnpResults);
         }
 
-        for(size_t i = 0; i < json_array_size(root); i++)
-        {
-            RDKLOG_TRACE("array iteration %d", i);
-            json_t *value, *object;
-            const char* key;
-
-            object = json_array_get(root, i);
-            if(!json_is_object(object))
-            {
-                RDKLOG_ERROR("error: commit data %d is not an object", i + 1);
-                continue;
-            }
-            StringHash hash;
-            json_object_foreach(object, key, value) {
-                RDKLOG_TRACE("appending %s:%s to hash", key, json_string_value(value));
-                hash[key] = json_string_value(value);
-            }
-
-            upnpDevices.push_back(hash);
-            numberOfUpnpResults++;
-        }
+        json_decref(root);
     }
-
-    json_decref(root);
 
     RDKLOG_INFO("number of upnp results: %d", numberOfUpnpResults);
     return upnpDevices;
@@ -194,7 +209,7 @@ void newUpnpResultsAvailable(const VectorOfMaps& res)
     parseResults(res);
 }
 
-static void requestUpnpList()
+void requestUpnpList()
 {
     RDKLOG_WARNING("requesting upnp results");
     IARM_Bus_SYSMgr_EventData_t eventData;
@@ -225,23 +240,7 @@ void _evtHandler(const char *owner_c, IARM_EventId_t eventId, void *data, size_t
     }
 }
 
-// static void querySysMgr()
-// {
-//     // first time zone source: sysMgr.
-//     IARM_Bus_SYSMgr_GetSystemStates_Param_t param;
-//     IARM_Bus_Call(IARM_BUS_SYSMGR_NAME, IARM_BUS_SYSMGR_API_GetSystemStates, &param, sizeof(param));
-//     if(param.time_zone_available.state)
-//     {
-//         RDKLOG_WARNING("TZ set to %s", param.time_zone_available.payload);
-//         setenv("TZ", param.time_zone_available.payload, 1);
-//     }
-//     else
-//     {
-//         RDKLOG_WARNING("TZ not set");
-//     }
-// }
-
-static void registerUpdateListener()
+void registerUpdateListener()
 {
     // next time zone source: upnp
 #ifdef USE_UPNP_DISCOVERY
@@ -257,8 +256,6 @@ namespace TimeZoneSupport
 
 void initialize(void)
 {
-    // FIXME: do we need both??
-    //querySysMgr();
     registerUpdateListener();
 }
 
