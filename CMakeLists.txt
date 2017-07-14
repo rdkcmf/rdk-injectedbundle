@@ -35,6 +35,7 @@ set(ComcastInjectedBundle_SOURCES
       ${ComcastInjectedBundle_SOURCES}
       AAMPJSController.cpp
     )
+add_definitions(-DENABLE_AAMP_JSBINDING)
 endif()
 
 find_package(PkgConfig REQUIRED)

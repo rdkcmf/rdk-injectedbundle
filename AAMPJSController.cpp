@@ -42,18 +42,18 @@ namespace AAMPJSController
 
 void initialize()
 {
-    RDKLOG_INFO("AAMPJSController::initialize()\n");
+    RDKLOG_INFO("AAMPJSController::initialize()");
 }
 
 void didCreatePage(WKBundlePageRef page)
 {
     AAMP_UNUSED(page);
-    RDKLOG_INFO("AAMPJSController::didCreatePage()\n");
+    RDKLOG_INFO("AAMPJSController::didCreatePage()");
 }
 
 void didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame)
 {
-    RDKLOG_INFO("AAMPJSController::didCommitLoad()\n");
+    RDKLOG_INFO("AAMPJSController::didCommitLoad()");
     if (WKBundlePageGetMainFrame(page) != frame)
     {
         RDKLOG_INFO("Frame is not allowed to inject JS window objects!\n");
@@ -66,7 +66,7 @@ void didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame)
 
 void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef frame)
 {
-    RDKLOG_INFO("AAMPJSController::didStartProvisionalLoadForFrame()\n");
+    RDKLOG_INFO("AAMPJSController::didStartProvisionalLoadForFrame()");
 
     WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(page);
     if (mainFrame == frame)
@@ -80,7 +80,7 @@ bool didReceiveMessageToPage(WKStringRef messageName, WKTypeRef messageBody)
 {
     AAMP_UNUSED(messageName);
     AAMP_UNUSED(messageBody);
-    RDKLOG_INFO("AAMPJSController::didReceiveMessageToPage()\n");
+    RDKLOG_INFO("AAMPJSController::didReceiveMessageToPage()");
     return false;
 }
 
