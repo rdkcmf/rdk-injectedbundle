@@ -75,6 +75,13 @@ if(USE_NX_CLIENT)
   list(APPEND AVE_LIBRARIES -lnxclient)
 endif()
 
+if(USE_INTELCE)
+  set(AVE_LIBRARIES
+    ${AVE_LIBRARIES} -lgdl
+  )
+  add_definitions(-DUSE_INTELCE=1)
+endif()
+
 target_link_libraries(ComcastInjectedBundle "${GLIB_LIBRARIES}" ${AVE_LIBRARIES} -ljansson -lWPEWebKit)
 
 install(TARGETS ComcastInjectedBundle LIBRARY DESTINATION lib)
