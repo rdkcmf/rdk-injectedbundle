@@ -73,6 +73,11 @@ public:
      */
     void didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame);
 
+    /**
+     * Release protected resources
+     */
+    void clear(WKBundlePageRef page);
+
 private:
 
     Proxy();

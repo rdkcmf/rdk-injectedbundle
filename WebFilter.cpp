@@ -85,9 +85,12 @@ public:
         return filter;
     }
 
-    void addFilters(WKBundlePageRef page, FilterVector&& filters)
+    void setFilters(WKBundlePageRef page, FilterVector&& filters)
     {
-        filtersMap[page] = std::move(filters);
+        if (filters.empty())
+            removeFilters(page);
+        else
+            filtersMap[page] = std::move(filters);
     }
 
     void removeFilters(WKBundlePageRef page)
@@ -131,7 +134,7 @@ private:
 } // namespace
 
 
-void addWebFiltersForPage(WKBundlePageRef page, WKTypeRef filters)
+void setWebFiltersForPage(WKBundlePageRef page, WKTypeRef filters)
 {
     RDKLOG_INFO("page: %p", page);
 
@@ -158,7 +161,7 @@ void addWebFiltersForPage(WKBundlePageRef page, WKTypeRef filters)
             WKBooleanGetValue(static_cast<WKBooleanRef>(WKArrayGetItemAtIndex(patternParams, 2))));
     }
 
-    WebFilter::singleton().addFilters(page, std::move(filtersToPass));
+    WebFilter::singleton().setFilters(page, std::move(filtersToPass));
 }
 
 void removeWebFiltersForPage(WKBundlePageRef page)

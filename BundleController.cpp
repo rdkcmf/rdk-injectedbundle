@@ -25,6 +25,9 @@
 #include "AAMPJSController.h"
 #endif
 
+#include "logger.h"
+#include "utils.h"
+
 #include <WebKit/WKBundleBackForwardList.h>
 #include <WebKit/WKBundleBackForwardListItem.h>
 #include <WebKit/WKBundlePage.h>
@@ -36,8 +39,34 @@
 namespace
 {
 
+bool shouldInjectBindings(WKURLRef url)
+{
+    if (url == nullptr)
+        return false;
+    WKRetainPtr<WKStringRef> wkHost = adoptWK(WKURLCopyHostName(url));
+    if (wkHost.get() == nullptr)
+        return false;
+    std::string hostStr = Utils::toStdString(wkHost.get());
+    if (hostStr.empty() || hostStr.find("youtube.com") != std::string::npos)
+        return false;
+    return true;
+}
+
 void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef frame, WKTypeRef*, const void *)
 {
+    WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(page);
+    if (mainFrame == frame)
+    {
+        JSBridge::Proxy::singleton().clear(page);
+
+        WKRetainPtr<WKURLRef> wkUrl = adoptWK(WKBundleFrameCopyURL(frame));
+        WKRetainPtr<WKStringRef> wkScheme = adoptWK(WKURLCopyScheme(wkUrl.get()));
+        if (WKStringIsEqualToUTF8CString(wkScheme.get(), "about"))
+        {
+            WKBundleBackForwardListClear(WKBundlePageGetBackForwardList(page));
+        }
+    }
+
     AVESupport::didStartProvisionalLoadForFrame(page, frame);
 #ifdef ENABLE_AAMP_JSBINDING
     AAMPJSController::didStartProvisionalLoadForFrame(page, frame);
@@ -48,18 +77,26 @@ void didCommitLoad(WKBundlePageRef page,
     WKBundleFrameRef frame, WKTypeRef*, const void*)
 {
     JSBridge::Proxy::singleton().didCommitLoad(page, frame);
+
+    WKRetainPtr<WKURLRef> wkUrl = adoptWK(WKBundleFrameCopyURL(frame));
+    if (!shouldInjectBindings(wkUrl.get()))
+    {
+        WKRetainPtr<WKStringRef> wkUrlStr = adoptWK(WKURLCopyString(wkUrl.get()));
+        RDKLOG_INFO("Skip AVE/AAMP bindings injection for %s",
+                    Utils::toStdString(wkUrlStr.get()).c_str());
+        return;
+    }
+
     AVESupport::didCommitLoad(page, frame);
 #ifdef ENABLE_AAMP_JSBINDING
     AAMPJSController::didCommitLoad(page, frame);
 #endif
 }
 
-bool shouldGoToBackForwardListItem(WKBundlePageRef page, WKBundleBackForwardListItemRef item, WKTypeRef*, const void*)
+bool shouldGoToBackForwardListItem(WKBundlePageRef, WKBundleBackForwardListItemRef item, WKTypeRef*, const void*)
 {
-    auto backForwardList = WKBundlePageGetBackForwardList(page);
-    auto backCount = WKBundleBackForwardListGetBackListCount(backForwardList);
-    if (backCount == 1 && WKURLIsEqual(adoptWK(WKBundleBackForwardListItemCopyURL(item)).get(),
-                                       adoptWK(WKURLCreateWithUTF8CString("about:blank")).get()))
+     if (item && WKURLIsEqual(adoptWK(WKBundleBackForwardListItemCopyURL(item)).get(),
+                              adoptWK(WKURLCreateWithUTF8CString("about:blank")).get()))
         return false;
     return true;
 }
@@ -72,6 +109,11 @@ WKURLRequestRef willSendRequestForFrame(WKBundlePageRef page, WKBundleFrameRef, 
     applyRequestHeaders(page, request);
     WKRetainPtr<WKURLRequestRef> newRequest = request;
     return newRequest.leakRef();
+}
+
+static WKBundlePagePolicyAction decidePolicyForNavigationAction(WKBundlePageRef, WKBundleFrameRef, WKBundleNavigationActionRef, WKURLRequestRef, WKTypeRef*, const void*)
+{
+    return WKBundlePagePolicyActionUse;
 }
 
 void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
@@ -125,6 +167,16 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
 
     WKBundlePageSetResourceLoadClient(page, &resourceLoadClient.base);
 
+    WKBundlePagePolicyClientV0 policyClient {
+        {0, clientInfo},
+        decidePolicyForNavigationAction,  // decidePolicyForNavigationAction
+        nullptr,  // decidePolicyForNewWindowAction
+        nullptr,  // decidePolicyForResponse
+        nullptr   // unableToImplementPolicy
+    };
+
+    WKBundlePageSetPolicyClient(page, &policyClient.base);
+
     AVESupport::didCreatePage(page);
 }
 
@@ -139,7 +191,7 @@ void didReceiveMessageToPage(WKBundleRef,
 {
     if (WKStringIsEqualToUTF8CString(messageName, "webfilters"))
     {
-        addWebFiltersForPage(page, messageBody);
+        setWebFiltersForPage(page, messageBody);
         return;
     }
 

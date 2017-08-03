@@ -233,4 +233,17 @@ void Proxy::setClient(WKBundlePageRef bundle)
     m_client = bundle;
 }
 
+void Proxy::clear(WKBundlePageRef page)
+{
+    if (m_client != page)
+        return;
+
+    JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(WKBundlePageGetMainFrame(page));
+    for (auto& kv : m_queries)
+    {
+        kv.second->unprotect(context);
+    }
+    m_queries.clear();
+}
+
 } // namespace WPEQuery

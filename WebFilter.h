@@ -22,7 +22,7 @@
 #include <WebKit/WKBundlePage.h>
 #include <WebKit/WKURLRequest.h>
 
-void addWebFiltersForPage(WKBundlePageRef, WKTypeRef);
+void setWebFiltersForPage(WKBundlePageRef, WKTypeRef);
 
 void removeWebFiltersForPage(WKBundlePageRef);
 

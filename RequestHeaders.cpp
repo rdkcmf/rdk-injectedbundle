@@ -75,7 +75,10 @@ void setRequestHeadersToPage(WKBundlePageRef page, WKTypeRef headersRef)
     }
 
     RDKLOG_INFO("page [%p]: %u headers set", page, size);
-    s_pageHeaders[page] = std::move(headers);
+    if (headers.empty())
+        removeRequestHeadersFromPage(page);
+    else
+        s_pageHeaders[page] = std::move(headers);
 }
 
 void removeRequestHeadersFromPage(WKBundlePageRef page)
