@@ -24,6 +24,10 @@
 #include <WebKit/WKRetainPtr.h>
 #include <WebKit/WKBundlePagePrivate.h>
 
+#ifdef USE_INTELCE
+#include <gdl.h>
+#endif
+
 #include <dlfcn.h>
 
 #include "AVESupport.h"
@@ -61,6 +65,24 @@ DLL_PUBLIC void SetSurfacePos(void*, int, int) {}
 DLL_PUBLIC void SetSurfaceSize(void*, int, int) {}
 DLL_PUBLIC void GetSurfaceScale(double *pScaleX, double *pScaleY)
 {
+#ifdef USE_INTELCE
+    gdl_display_info_t display_info;
+    gdl_ret_t rc = GDL_SUCCESS;
+    rc = gdl_get_display_info (GDL_DISPLAY_ID_0, &display_info);
+    RDKLOG_TRACE("return code: %d, width: %f, height: %f \n", rc, display_info.tvmode.width / 1280.0, display_info.tvmode.height / 720.0);
+
+    if(rc)
+    {
+        *pScaleX = 1.0;
+        *pScaleY = 1.0;
+        return;
+    }
+
+    *pScaleX = display_info.tvmode.width / 1280.0;
+    *pScaleY = display_info.tvmode.height / 720.0;
+    return;
+#endif
+
 #ifdef USE_NX_CLIENT
     // Special case for SD resolution, upscale to match the video surface size.
     NxClient_DisplaySettings displaySettings;
