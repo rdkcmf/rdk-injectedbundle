@@ -146,7 +146,8 @@ window.ServiceManager.generateMethod = function (objectName, methodName)
         window.ServiceManager.sendQuery({
             request: message,
             onSuccess: forwardResponseCallback(onSuccess),
-            onFailure: dumpResponseCallback("Failure callback")});
+            onFailure: onFailure
+        });
     }
 }
 
