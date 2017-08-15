@@ -53,37 +53,53 @@ void injectWPEQuery(JSGlobalContextRef context)
     }
 }
 
-void injectServiceManager(JSGlobalContextRef context)
+JSValueRef injectObjectFromScript(JSGlobalContextRef context, const char* scriptName, const char* objectName)
 {
-    JSObjectRef windowObject = JSContextGetGlobalObject(context);
-    JSRetainPtr<JSStringRef> serviceManagerStr = adopt(JSStringCreateWithUTF8CString("ServiceManager"));
-
-    const char* jsFile = "/usr/share/injectedbundle/ServiceManager.js";
     std::string content;
-    if (!Utils::readFile(jsFile, content))
+    std::string filePath = std::string("/usr/share/injectedbundle/") + scriptName;
+    if (!Utils::readFile(filePath.c_str(), content))
     {
-        RDKLOG_ERROR("Error: Could not read file %s!", jsFile);
-        return;
+        RDKLOG_ERROR("Could not read file '%s'!", filePath.c_str());
+        return 0;
     }
 
     JSValueRef exc = 0;
     (void) Utils::evaluateUserScript(context, content, &exc);
     if (exc)
     {
-        RDKLOG_ERROR("Could not evaluate user script %s!", jsFile);
-        return;
+        RDKLOG_ERROR("Could not evaluate user script '%s'!", filePath.c_str());
+        return 0;
     }
 
-    if (JSObjectHasProperty(context, windowObject, serviceManagerStr.get()) != true)
+    JSObjectRef windowObject = JSContextGetGlobalObject(context);
+    if (!windowObject)
     {
-        RDKLOG_ERROR("Could not find ServiceManager object!");
-        return;
+        RDKLOG_ERROR("Could not get global object (window)!");
+        return 0;
     }
 
-    JSValueRef smObject = JSObjectGetProperty(context, windowObject, serviceManagerStr.get(), &exc);
+    JSRetainPtr<JSStringRef> objectNameStr = adopt(JSStringCreateWithUTF8CString(objectName));
+    if (!JSObjectHasProperty(context, windowObject, objectNameStr.get()))
+    {
+        RDKLOG_ERROR("Could not find property wnndow.%s!", objectName);
+        return 0;
+    }
+
+    JSValueRef object = JSObjectGetProperty(context, windowObject, objectNameStr.get(), &exc);
     if (exc)
     {
-        RDKLOG_ERROR("Could not get property ServiceManager!");
+        RDKLOG_ERROR("Could not get property window.%s!", objectName);
+        return 0;
+    }
+
+    return object;
+}
+
+void injectServiceManager(JSGlobalContextRef context)
+{
+    JSValueRef smObject = injectObjectFromScript(context, "ServiceManager.js", "ServiceManager");
+    if (!smObject)
+    {
         return;
     }
 
@@ -91,6 +107,7 @@ void injectServiceManager(JSGlobalContextRef context)
     JSValueRef sendQueryObject = JSObjectMakeFunctionWithCallback(context,
         sendQueryStr.get(), JSBridge::onJavaScriptServiceManagerRequest);
 
+    JSValueRef exc = 0;
     JSObjectSetProperty(context, (JSObjectRef) smObject, sendQueryStr.get(), sendQueryObject,
         kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete | kJSPropertyAttributeDontEnum, &exc);
 
@@ -141,6 +158,12 @@ void Proxy::didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame)
     auto context = WKBundleFrameGetJavaScriptContext(frame);
     injectWPEQuery(context);
     injectServiceManager(context);
+
+    // Optionally inject XDB to be visible in JavaScript.
+    if (getenv("WEBKIT_INSPECTOR_SERVER"))
+    {
+        injectObjectFromScript(context, "XDB.js", "XDB");
+    }
 }
 
 void Proxy::sendQuery(const char* name, JSContextRef ctx,
