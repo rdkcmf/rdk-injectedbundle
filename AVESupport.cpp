@@ -156,8 +156,9 @@ struct AVEWk
     bool m_enabled;
     bool m_IARMinitialized;
     WKBundlePageRef m_client;
+    AVELogLevel m_logLevel;
 
-    AVEWk () : m_enabled(false), m_IARMinitialized(false), m_client(nullptr) {}
+    AVEWk () : m_enabled(false), m_IARMinitialized(false), m_client(nullptr), m_logLevel(eWarning) {}
 
 } s_wk;
 
@@ -187,7 +188,7 @@ bool initIARM()
 
 void aveLogCallback(const char* prefix, const AVELogLevel level, const char* data)
 {
-    if (level != eMetric || !s_wk.m_client)
+    if (level >= s_wk.m_logLevel && s_wk.m_logLevel != eOff)
     {
         RDK::LogLevel rdkLogLvl;
         switch (level)
@@ -195,15 +196,17 @@ void aveLogCallback(const char* prefix, const AVELogLevel level, const char* dat
             case eTrace:    rdkLogLvl = RDK::LogLevel::TRACE_LEVEL; break;
             case eDebug:    rdkLogLvl = RDK::LogLevel::VERBOSE_LEVEL; break;
             case eLog:      rdkLogLvl = RDK::LogLevel::VERBOSE_LEVEL; break;
-            case eMetric:   rdkLogLvl = RDK::LogLevel::VERBOSE_LEVEL; break;
+            case eMetric:   rdkLogLvl = RDK::LogLevel::INFO_LEVEL; break;
             case eWarning:  rdkLogLvl = RDK::LogLevel::WARNING_LEVEL; break;
             case eError:    rdkLogLvl = RDK::LogLevel::ERROR_LEVEL; break;
             default:        rdkLogLvl = RDK::LogLevel::ERROR_LEVEL; break;
         }
 
-        _LOG(rdkLogLvl, "%s %s", prefix, data);
-        return;
+        _LOG(rdkLogLvl, "%s %s", prefix ?: "(null)", data ?: "(null)");
     }
+
+    if (!s_wk.m_client || level != eMetric)
+        return;
 
     bool sendToBrowser = false;
     if (strstr(data, "---------> Resume"))
@@ -259,6 +262,7 @@ void injectUserScript(WKBundlePageRef page, const char* path)
 
 void setAVELogLevel(uint64_t level)
 {
+    s_wk.m_logLevel = static_cast<AVELogLevel>(level);
     setPSDKLoggingCallback(AVESupport::aveLogCallback, (AVELogLevel) level);
 }
 
