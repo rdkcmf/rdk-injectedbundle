@@ -102,19 +102,52 @@ DLL_PUBLIC void GetSurfaceScale(double *pScaleX, double *pScaleY)
 using namespace psdk;
 using namespace psdkutils;
 
+static GSourceFuncs gEventDispatcherSourceFuncs =
+{
+    nullptr, // prepare
+    nullptr, // check
+    // dispatch
+    [](GSource* source, GSourceFunc callback, gpointer data) -> gboolean
+    {
+        if (g_source_get_ready_time(source) != -1)
+        {
+            g_source_set_ready_time(source, -1);
+            return callback(data);
+        }
+        return G_SOURCE_CONTINUE;
+    },
+    nullptr, // finalize
+    nullptr, // closure_callback
+    nullptr, // closure_marshall
+};
+
 class DLL_PUBLIC WPECallbackManager :  public psdk::PSDKEventManager
 {
+    GSource* m_source;
 public:
     WPECallbackManager()
-        :  _refCount(0) {}
-    virtual ~WPECallbackManager() {}
+        :  _refCount(0)
+    {
+        m_source = g_source_new(&gEventDispatcherSourceFuncs, sizeof(GSource));
+        g_source_set_name(m_source, "PSDK Event dispatcher");
+        g_source_set_can_recurse(m_source, TRUE);
+        g_source_set_callback(m_source, [](gpointer data) -> gboolean {
+            WPECallbackManager &self = *static_cast<WPECallbackManager*>(data);
+            self.firePostedEvents();
+            return G_SOURCE_CONTINUE;
+        }, this, nullptr);
+        g_source_set_priority(m_source, G_PRIORITY_HIGH + 30); // Should match WebCore's shared timer priority
+        g_source_attach(m_source, g_main_context_default());
+    }
+
+    virtual ~WPECallbackManager()
+    {
+        g_source_destroy(m_source);
+    }
+
     virtual void eventPosted()
     {
-        g_timeout_add(0, [](gpointer data) -> gboolean {
-          WPECallbackManager &self = *static_cast<WPECallbackManager*>(data);
-          self.firePostedEvents();
-          return G_SOURCE_REMOVE;
-        }, this);
+        g_source_set_ready_time(m_source, 0);
     }
 
     virtual PSDKErrorCode getInterface(InterfaceId, void **)
