@@ -241,31 +241,46 @@ void aveLogCallback(const char* prefix, const AVELogLevel level, const char* dat
     if (!s_wk.m_client || level != eMetric)
         return;
 
-    bool sendToBrowser = false;
-    if (strstr(data, "---------> Resume"))
-    {
-        sendToBrowser = true;
-    }
-    else if (strstr(data, "HttpRequestEnd") )
-    {
-        sendToBrowser = true;
-    }
-    else if (strstr(data, "TuneTime"))
-    {
-        if (strstr(data, "TuneTimeBeginLoad") ||
-           strstr(data, "TuneTimePrepareToPlay") ||
-           strstr(data, "TuneTimePlay") ||
-           strstr(data, "TuneTimeDrmReady") ||
-           strstr(data, "TuneTimeStartStream") ||
-           strstr(data, "TuneTimeStreaming") ||
-           strstr(data, "TuneTimeIsLive") )
-        {
-            sendToBrowser = true;
-        }
-    }
+	static bool checkSendAllOnce = true;
+	static bool sendAllToBrowser = false;
+	if(checkSendAllOnce)
+	{
+		checkSendAllOnce = false;
+		const char* s = getenv("WPE_SEND_ALL_AVE_LOGS");
+		if (s && strcasecmp(s,"TRUE")==0)
+		{
+			sendAllToBrowser = true;
+		}
+	}
 
-    if (!sendToBrowser)
-        return;
+	if(sendAllToBrowser == false)
+	{
+		bool sendToBrowser = false;
+		if (strstr(data, "---------> Resume"))
+		{
+		    sendToBrowser = true;
+		}
+		else if (strstr(data, "HttpRequestEnd") )
+		{
+		    sendToBrowser = true;
+		}
+		else if (strstr(data, "TuneTime"))
+		{
+		    if (strstr(data, "TuneTimeBeginLoad") ||
+		       strstr(data, "TuneTimePrepareToPlay") ||
+		       strstr(data, "TuneTimePlay") ||
+		       strstr(data, "TuneTimeDrmReady") ||
+		       strstr(data, "TuneTimeStartStream") ||
+		       strstr(data, "TuneTimeStreaming") ||
+		       strstr(data, "TuneTimeIsLive") )
+		    {
+		        sendToBrowser = true;
+		    }
+		}
+
+		if (!sendToBrowser)
+		    return;
+	}
 
     WKRetainPtr<WKStringRef> nameRef = adoptWK(WKStringCreateWithUTF8CString("onAVELog"));
     WKRetainPtr<WKStringRef> prefixRef = adoptWK(WKStringCreateWithUTF8CString(prefix));
