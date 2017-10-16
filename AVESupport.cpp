@@ -238,9 +238,6 @@ void aveLogCallback(const char* prefix, const AVELogLevel level, const char* dat
         _LOG(rdkLogLvl, "%s %s", prefix ?: "(null)", data ?: "(null)");
     }
 
-    if (!s_wk.m_client || level != eMetric)
-        return;
-
     static bool checkSendAllOnce = true;
     static bool sendAllToBrowser = false;
     if(checkSendAllOnce)
@@ -253,8 +250,14 @@ void aveLogCallback(const char* prefix, const AVELogLevel level, const char* dat
         }
     }
 
+    if (!s_wk.m_client)
+        return;
+
     if(sendAllToBrowser == false)
     {
+        if(level != eMetric)
+            return;
+
         bool sendToBrowser = false;
         if (strstr(data, "---------> Resume"))
         {
