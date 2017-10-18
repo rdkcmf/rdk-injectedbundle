@@ -28,6 +28,8 @@
 #include "logger.h"
 #include "utils.h"
 #include <fstream>
+#include <string>
+#include <stdlib.h>
 
 #define AAMP_UNUSED(x) (void) x
 
@@ -40,9 +42,21 @@ extern "C"
 namespace AAMPJSController
 {
 
+bool enableAAMP = false;
+
 void initialize()
 {
     RDKLOG_TRACE("AAMPJSController::initialize()");
+
+    enableAAMP = false; //Set default value
+
+    //Check if AAMP is enabled in configuration
+    const char *status = getenv("ENABLE_AAMP");
+    if (status != NULL && strcasecmp(status, "TRUE") == 0)
+    {
+        RDKLOG_INFO("AAMPJSController::initialize() - AAMP enabled!");
+        enableAAMP = true;
+    }
 }
 
 void didCreatePage(WKBundlePageRef page)
@@ -59,8 +73,11 @@ void didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame)
         return;
     }
 
-    JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(frame);
-    aamp_LoadJSController(context);
+    if (enableAAMP)
+    {
+        JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(frame);
+        aamp_LoadJSController(context);
+    }
 }
 
 void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef frame)
@@ -68,7 +85,7 @@ void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef fram
     RDKLOG_TRACE("AAMPJSController::didStartProvisionalLoadForFrame()");
 
     WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(page);
-    if (mainFrame == frame)
+    if (mainFrame == frame && enableAAMP)
     {
         JSGlobalContextRef context = WKBundleFrameGetJavaScriptContext(mainFrame);
         aamp_UnloadJSController(context);
