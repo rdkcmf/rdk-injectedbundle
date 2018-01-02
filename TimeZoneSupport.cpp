@@ -130,12 +130,12 @@ VectorOfMaps jsonToListOfMaps(const char* upnpResults)
 
     if (upnpResults != NULL)
     {
-        RDKLOG_INFO("upnp results from xupnp: %s", upnpResults);
         json_error_t error;
         root = json_loads(upnpResults, 0, &error);
 
         if(!root)
         {
+            RDKLOG_WARNING("upnp results from xupnp: %s", upnpResults);
             RDKLOG_ERROR("JSON parsing error on line %d: %s", error.line, error.text);
             return upnpDevices;
         }
