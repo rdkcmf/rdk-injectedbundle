@@ -249,7 +249,8 @@ void _evtHandler(const char *owner_c, IARM_EventId_t eventId, void *data, size_t
                 int messageLength = eventData->data.xupnpData.deviceInfoLength;
                 RDKLOG_INFO("IARM_BUS_SYSMGR_EVENT_XUPNP_DATA_UPDATE messageLength : %d", messageLength);
                 char upnpResults[messageLength+1];
-                getUpnpResults(&upnpResults[0], messageLength);
+                memset(upnpResults, 0, messageLength+1);
+                getUpnpResults(upnpResults, messageLength);
                 newUpnpResultsAvailable(jsonToListOfMaps(upnpResults));
 #endif
                 break;
