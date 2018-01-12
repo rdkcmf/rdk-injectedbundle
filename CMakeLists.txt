@@ -63,7 +63,7 @@ if(ENABLE_RDK_LOGGER)
 endif()
 
 set(AVE_LIBRARIES
-  -lAVEPlayer -lds -ldshalcli -ldl -lm -lIARMBus
+  -lAVEPlayer -lds -ldshalcli -ldl -lm -lIARMBus -lcurl -lssl
 )
 
 if(ENABLE_AAMP_JSBINDING)

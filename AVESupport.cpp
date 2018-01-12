@@ -16,6 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
+#include <WebKit/WKBundle.h>
 #include <WebKit/WKBundlePage.h>
 #include <WebKit/WKBundleFrame.h>
 #include <WebKit/WKArray.h>
@@ -36,6 +37,7 @@
 #include <fstream>
 #include <mutex>
 
+#include <curl/curl.h>
 #include <glib.h>
 #include <kernel/Callbacks.h>
 #include <psdk/PSDKEvents.h>
@@ -295,13 +297,16 @@ void installAVELoggingCallback()
 {
     static std::once_flag flag;
     std::call_once(flag, [] () {
-        setAVELogLevel(eMetric);
+        setAVELogLevel(s_wk.m_logLevel);
     });
 }
 
 void initialize()
 {
     RDKLOG_INFO("");
+    curl_global_init(CURL_GLOBAL_ALL);
+    RDKLOG_INFO("using curl:%s", curl_version());
+
     setCCHandleDirectMode(true);
     if (initIARM())
     {
@@ -376,9 +381,21 @@ void onSetAVESessionToken(WKTypeRef messageBody)
         return;
     }
 
+    RDKLOG_INFO("Got session token.");
+    RDKLOG_TRACE("Token=%s", token.c_str());
+
     setComcastSessionToken(token.c_str());
 
-    RDKLOG_INFO("token=%s", token.c_str());
+    // Stop memory pressure handler for tune
+    static int gResumePressureHandlerTag = 0;
+    static int gTuneTimeoutSeconds = 20;
+    if (gResumePressureHandlerTag)
+        g_source_remove(gResumePressureHandlerTag);
+    WKBundleMemoryPressureHandlerStop();
+    gResumePressureHandlerTag = g_timeout_add_seconds_full(G_PRIORITY_DEFAULT_IDLE, gTuneTimeoutSeconds, [](gpointer) -> gboolean {
+        WKBundleMemoryPressureHandlerStart();
+        return G_SOURCE_REMOVE;
+    }, nullptr, nullptr);
 }
 
 void onSetAVEEnabled(WKTypeRef messageBody)
