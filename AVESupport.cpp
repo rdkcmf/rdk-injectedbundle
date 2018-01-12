@@ -226,13 +226,9 @@ void aveLogCallback(const char* prefix, const AVELogLevel level, const char* dat
         RDK::LogLevel rdkLogLvl;
         switch (level)
         {
-            case eTrace:    rdkLogLvl = RDK::LogLevel::TRACE_LEVEL; break;
-            case eDebug:    rdkLogLvl = RDK::LogLevel::VERBOSE_LEVEL; break;
-            case eLog:      rdkLogLvl = RDK::LogLevel::VERBOSE_LEVEL; break;
-            case eMetric:   rdkLogLvl = RDK::LogLevel::INFO_LEVEL; break;
             case eWarning:  rdkLogLvl = RDK::LogLevel::WARNING_LEVEL; break;
             case eError:    rdkLogLvl = RDK::LogLevel::ERROR_LEVEL; break;
-            default:        rdkLogLvl = RDK::LogLevel::ERROR_LEVEL; break;
+            default:        rdkLogLvl = RDK::LogLevel::INFO_LEVEL; break;
         }
 
         _LOG(rdkLogLvl, "%s %s", prefix ?: "(null)", data ?: "(null)");
@@ -258,31 +254,8 @@ void aveLogCallback(const char* prefix, const AVELogLevel level, const char* dat
         if(level != eMetric)
             return;
 
-        bool sendToBrowser = false;
-        if (strstr(data, "---------> Resume"))
-        {
-            sendToBrowser = true;
-        }
-        else if (strstr(data, "HttpRequestEnd") )
-        {
-           sendToBrowser = true;
-        }
-        else if (strstr(data, "TuneTime"))
-        {
-            if (strstr(data, "TuneTimeBeginLoad") ||
-               strstr(data, "TuneTimePrepareToPlay") ||
-               strstr(data, "TuneTimePlay") ||
-               strstr(data, "TuneTimeDrmReady") ||
-               strstr(data, "TuneTimeStartStream") ||
-               strstr(data, "TuneTimeStreaming") ||
-               strstr(data, "TuneTimeIsLive") )
-            {
-                sendToBrowser = true;
-            }
-        }
-
-    if (!sendToBrowser)
-        return;
+        if (strstr(data, "HttpRequestEnd")==0 && strstr(data, "TuneTime")==0 && strstr(data, "---------> Resume")==0)
+            return;
     }
 
     WKRetainPtr<WKStringRef> nameRef = adoptWK(WKStringCreateWithUTF8CString("onAVELog"));
@@ -313,6 +286,7 @@ void injectUserScript(WKBundlePageRef page, const char* path)
 
 void setAVELogLevel(uint64_t level)
 {
+    RDKLOG_INFO("setAVELogLevel %d", (int)level);
     s_wk.m_logLevel = static_cast<AVELogLevel>(level);
     setPSDKLoggingCallback(AVESupport::aveLogCallback, (AVELogLevel) level);
 }
@@ -430,7 +404,6 @@ void onSetAVELogLevel(WKTypeRef messageBody)
     uint64_t level = WKUInt64GetValue((WKUInt64Ref) messageBody);
 
     setAVELogLevel(level);
-    RDKLOG_INFO("[%llu]", level);
 }
 
 bool didReceiveMessageToPage(WKStringRef messageName, WKTypeRef messageBody)
