@@ -115,8 +115,14 @@ public:
                     continue;
                 if (f.hostPattern && !g_pattern_match_string(f.hostPattern, host.c_str()))
                     continue;
-                RDKLOG_TRACE("filtering, found match:  scheme pattern [%s] host pattern [%s]  block: %s",
-                    f.schemePatternString.c_str(), f.hostPatternString.c_str(), f.block ? "true" : "false");
+                if (f.block)
+                {
+                    RDKLOG_INFO("filtering, found match:  scheme pattern [%s] host pattern [%s] request blocked",
+                            f.schemePatternString.c_str(), f.hostPatternString.c_str());
+                } else {
+                    RDKLOG_TRACE("filtering, found match:  scheme pattern [%s] host pattern [%s] request not blocked",
+                            f.schemePatternString.c_str(), f.hostPatternString.c_str());
+                }
                 return f.block;
             }
         }
