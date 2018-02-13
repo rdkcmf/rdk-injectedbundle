@@ -174,6 +174,8 @@ void timeZoneUpdated(string newZone)
         tzOut = "AKST09AKDT";
     else if(timeZone.compare("US/Hawaii")==0)
         tzOut = "HST11HDT";
+    else if(timeZone.compare("US/Arizona")==0)
+        tzOut = "MST07";
     else if(timeZone.compare("null") != 0 && timeZone.length() > 0)//just in case its already in correct format
         tzOut = timeZone;
 
