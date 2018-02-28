@@ -393,6 +393,7 @@ void onSetAVESessionToken(WKTypeRef messageBody)
         g_source_remove(gResumePressureHandlerTag);
     WKBundleMemoryPressureHandlerStop();
     gResumePressureHandlerTag = g_timeout_add_seconds_full(G_PRIORITY_DEFAULT_IDLE, gTuneTimeoutSeconds, [](gpointer) -> gboolean {
+        gResumePressureHandlerTag = 0;
         WKBundleMemoryPressureHandlerStart();
         return G_SOURCE_REMOVE;
     }, nullptr, nullptr);
