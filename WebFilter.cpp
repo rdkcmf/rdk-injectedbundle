@@ -119,6 +119,7 @@ public:
                 {
                     RDKLOG_INFO("filtering, found match:  scheme pattern [%s] host pattern [%s] request blocked",
                             f.schemePatternString.c_str(), f.hostPatternString.c_str());
+                    fprintf(stderr,"request blocked: %s\n",Utils::toStdString(adoptWK(WKURLCopyString(url)).get()).c_str());
                 } else {
                     RDKLOG_TRACE("filtering, found match:  scheme pattern [%s] host pattern [%s] request not blocked",
                             f.schemePatternString.c_str(), f.hostPatternString.c_str());
