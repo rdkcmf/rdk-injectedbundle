@@ -36,6 +36,8 @@
 #include <WebKit/WKRetainPtr.h>
 #include <WebKit/WKURL.h>
 
+#include <rdkat.h>
+
 namespace
 {
 
@@ -182,6 +184,7 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
 
 void willDestroyPage(WKBundleRef, WKBundlePageRef page, const void*)
 {
+    RDK_AT::Uninitialize();
     removeWebFiltersForPage(page);
     removeRequestHeadersFromPage(page);
 }
@@ -232,6 +235,7 @@ void initialize(WKBundleRef bundleRef, WKTypeRef)
         didReceiveMessageToPage
     };
 
+    RDK_AT::Initialize();
     WKBundleSetClient(bundleRef, &client.base);
 }
 

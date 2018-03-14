@@ -82,7 +82,7 @@ if(USE_INTELCE)
   add_definitions(-DUSE_INTELCE=1)
 endif()
 
-target_link_libraries(ComcastInjectedBundle "${GLIB_LIBRARIES}" ${AVE_LIBRARIES} -ljansson -lWPEWebKit)
+target_link_libraries(ComcastInjectedBundle "${GLIB_LIBRARIES}" ${AVE_LIBRARIES} -ljansson -lWPEWebKit -lrdkat)
 
 install(TARGETS ComcastInjectedBundle LIBRARY DESTINATION lib)
 install(FILES *.js DESTINATION share/injectedbundle)
