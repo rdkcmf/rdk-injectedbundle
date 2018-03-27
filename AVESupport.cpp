@@ -45,6 +45,8 @@
 
 #include <rdk/ds/manager.hpp>
 
+#include <sys/prctl.h>
+
 #ifdef USE_NX_CLIENT
 #include "nexus_config.h"
 #include "nxclient.h"
@@ -323,6 +325,8 @@ void enable(bool on = true)
             RDKLOG_ERROR("Can't enable AVE : IARM is not initialized");
             return;
         }
+
+        prctl(PR_SET_NAME, "WPEIPVideo", 0, 0, 0);
     }
 
     s_wk.m_enabled = on;
