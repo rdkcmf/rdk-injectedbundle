@@ -325,8 +325,6 @@ void enable(bool on = true)
             RDKLOG_ERROR("Can't enable AVE : IARM is not initialized");
             return;
         }
-
-        prctl(PR_SET_NAME, "WPEIPVideo", 0, 0, 0);
     }
 
     s_wk.m_enabled = on;
@@ -412,6 +410,12 @@ void onSetAVEEnabled(WKTypeRef messageBody)
     }
     bool enableAVE = WKBooleanGetValue((WKBooleanRef) messageBody);
     enable(enableAVE);
+
+    if (enableAVE)
+    {
+        prctl(PR_SET_NAME, "WPEIPVideo", 0, 0, 0);
+    }
+
     RDKLOG_INFO("AVE was %s", enableAVE ? "enabled" : "disabled");
 }
 
