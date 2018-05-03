@@ -41,6 +41,31 @@
 namespace
 {
 
+void setPageMediaVolume(void *page, float volume, bool restore)
+{
+    static double tVolume = 0.0;
+    if(page) {
+        double t = WKBundlePageGetVolume((WKBundlePageRef)page);
+        RDKLOG_INFO("Read mediaVolume is : %lf", t);
+
+        if(!restore) {
+            // Backup the original volume, if not done already
+            if(tVolume == 0)
+                tVolume = t;
+        } else {
+            // Revert back to the original volume (ignore the "volume" param)
+            volume = tVolume;
+            tVolume = 0;
+        }
+
+        if(volume == t)
+            return;
+
+        RDKLOG_INFO("setMediaVolume to : %lf", volume);
+        WKBundlePageSetVolume((WKBundlePageRef)page, volume);
+    }
+}
+
 bool shouldInjectBindings(WKURLRef url)
 {
     if (url == nullptr)
@@ -81,9 +106,14 @@ void didCommitLoad(WKBundlePageRef page,
     JSBridge::Proxy::singleton().didCommitLoad(page, frame);
 
     WKRetainPtr<WKURLRef> wkUrl = adoptWK(WKBundleFrameCopyURL(frame));
+    WKRetainPtr<WKStringRef> wkUrlStr = adoptWK(WKURLCopyString(wkUrl.get()));
+    std::string url = Utils::toStdString(wkUrlStr.get());
+
+    // Notify RDK_AT about the URL change so that a session will be created
+    RDK_AT::NotifyURLChange(url, setPageMediaVolume, (void*)page);
+
     if (!shouldInjectBindings(wkUrl.get()))
     {
-        WKRetainPtr<WKStringRef> wkUrlStr = adoptWK(WKURLCopyString(wkUrl.get()));
         RDKLOG_INFO("Skip AVE/AAMP bindings injection for %s",
                     Utils::toStdString(wkUrlStr.get()).c_str());
         return;
