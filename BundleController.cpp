@@ -21,6 +21,7 @@
 #include "AVESupport.h"
 #include "WebFilter.h"
 #include "RequestHeaders.h"
+#include "AccessibilitySupport.h"
 #ifdef ENABLE_AAMP_JSBINDING
 #include "AAMPJSController.h"
 #endif
@@ -40,31 +41,6 @@
 
 namespace
 {
-
-void setPageMediaVolume(void *page, float volume, bool restore)
-{
-    static double tVolume = 0.0;
-    if(page) {
-        double t = WKBundlePageGetVolume((WKBundlePageRef)page);
-        RDKLOG_INFO("Read mediaVolume is : %lf", t);
-
-        if(!restore) {
-            // Backup the original volume, if not done already
-            if(tVolume == 0)
-                tVolume = t;
-        } else {
-            // Revert back to the original volume (ignore the "volume" param)
-            volume = tVolume;
-            tVolume = 0;
-        }
-
-        if(volume == t)
-            return;
-
-        RDKLOG_INFO("setMediaVolume to : %lf", volume);
-        WKBundlePageSetVolume((WKBundlePageRef)page, volume);
-    }
-}
 
 bool shouldInjectBindings(WKURLRef url)
 {
@@ -231,6 +207,12 @@ void didReceiveMessageToPage(WKBundleRef,
     if (WKStringIsEqualToUTF8CString(messageName, "headers"))
     {
         setRequestHeadersToPage(page, messageBody);
+        return;
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "accessibility_settings"))
+    {
+        passAccessibilitySettingsToRDKAT(messageBody);
         return;
     }
 

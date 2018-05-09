@@ -28,6 +28,7 @@ set(ComcastInjectedBundle_SOURCES
       WebFilter.cpp
       RequestHeaders.cpp
       TimeZoneSupport.cpp
+      AccessibilitySupport.cpp
     )
 
 if(ENABLE_AAMP_JSBINDING)
