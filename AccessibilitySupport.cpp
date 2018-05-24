@@ -77,7 +77,7 @@ void passAccessibilitySettingsToRDKAT(WKTypeRef accessibilitySettingsRef)
     config.m_ttsEndPointSecured = Utils::toStdString((WKStringRef) WKArrayGetItemAtIndex(array, 1));
     config.m_language = Utils::toStdString((WKStringRef) WKArrayGetItemAtIndex(array, 2));
     config.m_rate = (uint8_t)WKUInt64GetValue((WKUInt64Ref)(WKArrayGetItemAtIndex(array, 3)));
-    bool enableVoiceGuidance = WKBooleanGetValue((WKBooleanRef)(WKArrayGetItemAtIndex(array, 3)));
+    bool enableVoiceGuidance = WKBooleanGetValue((WKBooleanRef)(WKArrayGetItemAtIndex(array, 4)));
     RDKLOG_INFO("accessibility_settings ttsEndPoint=%s, ttsEndPointSecured=%s, language=%s, rate=%d, enableVoiceGuidance=%d.",
             config.m_ttsEndPoint.c_str(),config.m_ttsEndPointSecured.c_str(),config.m_language.c_str(),config.m_rate,enableVoiceGuidance);
 
