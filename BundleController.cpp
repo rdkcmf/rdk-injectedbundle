@@ -86,7 +86,8 @@ void didCommitLoad(WKBundlePageRef page,
     std::string url = Utils::toStdString(wkUrlStr.get());
 
     // Notify RDK_AT about the URL change so that a session will be created
-    RDK_AT::NotifyURLChange(url, setPageMediaVolume, (void*)page);
+    if(WKBundlePageGetMainFrame(page) == frame)
+        RDK_AT::NotifyURLChange(url, setPageMediaVolume, (void*)page);
 
     if (!shouldInjectBindings(wkUrl.get()))
     {
