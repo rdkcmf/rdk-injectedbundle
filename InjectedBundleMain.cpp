@@ -17,8 +17,14 @@
  * limitations under the License.
 */
 #include "BundleController.h"
+
+#ifdef ENABLE_AVE
 #include "AVESupport.h"
+
+//FIXME remove dependency on iARM (initialization)
 #include "TimeZoneSupport.h"
+#endif
+
 #ifdef ENABLE_AAMP_JSBINDING
 #include "AAMPJSController.h"
 #endif
@@ -34,8 +40,14 @@ extern "C" void WKBundleInitialize(WKBundleRef bundle, WKTypeRef initializationU
     RDK::logger_init();
 
     JSBridge::initialize(bundle, initializationUserData);
+
+#ifdef ENABLE_AVE
     AVESupport::initialize();
+
+    //FIXME remove dependency on AVE (for iARM initilization)
     TimeZoneSupport::initialize();
+#endif
+
 #ifdef ENABLE_AAMP_JSBINDING
     AAMPJSController::initialize();
 #endif
