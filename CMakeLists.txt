@@ -23,13 +23,25 @@ set(ComcastInjectedBundle_SOURCES
       BundleController.cpp
       Proxy.cpp
       JavaScriptRequests.cpp
-      AVESupport.cpp
       logger.cpp
       WebFilter.cpp
       RequestHeaders.cpp
-      TimeZoneSupport.cpp
       AccessibilitySupport.cpp
     )
+
+if(ENABLE_AVE)
+  set(ComcastInjectedBundle_SOURCES
+        ${ComcastInjectedBundle_SOURCES}
+        AVESupport.cpp
+      )
+  add_definitions(-DENABLE_AVE)
+
+  #FIXME timezone support requires iARM, which is initialized in AVESupport.cpp
+  set(ComcastInjectedBundle_SOURCES
+        ${ComcastInjectedBundle_SOURCES}
+        TimeZoneSupport.cpp
+      )
+endif()
 
 if(ENABLE_AAMP_JSBINDING)
 set(ComcastInjectedBundle_SOURCES
@@ -63,9 +75,9 @@ if(ENABLE_RDK_LOGGER)
   target_link_libraries(ComcastInjectedBundle "-lrdkloggers -llog4c")
 endif()
 
-set(AVE_LIBRARIES
-  -lAVEPlayer -lds -ldshalcli -ldl -lm -lIARMBus -lcurl -lssl
-)
+if(ENABLE_AVE)
+  target_link_libraries(ComcastInjectedBundle "-lAVEPlayer -lds -ldshalcli -ldl -lm")
+endif()
 
 if(ENABLE_AAMP_JSBINDING)
   target_link_libraries(ComcastInjectedBundle "-laampjsbindings")
@@ -73,17 +85,15 @@ endif()
 
 if(USE_NX_CLIENT)
   add_definitions(-DUSE_NX_CLIENT)
-  list(APPEND AVE_LIBRARIES -lnxclient)
+  target_link_libraries(ComcastInjectedBundle "-lnxclient")
 endif()
 
 if(USE_INTELCE)
-  set(AVE_LIBRARIES
-    ${AVE_LIBRARIES} -lgdl
-  )
+  target_link_libraries(ComcastInjectedBundle "-lgdl")
   add_definitions(-DUSE_INTELCE=1)
 endif()
 
-target_link_libraries(ComcastInjectedBundle "${GLIB_LIBRARIES}" ${AVE_LIBRARIES} -ljansson -lWPEWebKit -lrdkat)
+target_link_libraries(ComcastInjectedBundle "${GLIB_LIBRARIES}" -ljansson -lWPEWebKit -lrdkat -lIARMBus -lcurl -lssl)
 
 install(TARGETS ComcastInjectedBundle LIBRARY DESTINATION lib)
 install(FILES *.js DESTINATION share/injectedbundle)

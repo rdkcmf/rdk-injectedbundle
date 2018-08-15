@@ -18,7 +18,11 @@
 */
 #include "BundleController.h"
 #include "Proxy.h"
+
+#ifdef ENABLE_AVE
 #include "AVESupport.h"
+#endif
+
 #include "WebFilter.h"
 #include "RequestHeaders.h"
 #include "AccessibilitySupport.h"
@@ -99,7 +103,10 @@ void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef fram
         }
     }
 
+#ifdef ENABLE_AVE
     AVESupport::didStartProvisionalLoadForFrame(page, frame);
+#endif
+
 #ifdef ENABLE_AAMP_JSBINDING
     AAMPJSController::didStartProvisionalLoadForFrame(page, frame);
 #endif
@@ -125,7 +132,10 @@ void didCommitLoad(WKBundlePageRef page,
         return;
     }
 
+#ifdef ENABLE_AVE
     AVESupport::didCommitLoad(page, frame);
+#endif
+
 #ifdef ENABLE_AAMP_JSBINDING
     AAMPJSController::didCommitLoad(page, frame);
 #endif
@@ -157,7 +167,11 @@ static WKBundlePagePolicyAction decidePolicyForNavigationAction(WKBundlePageRef,
 void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
 {
     JSBridge::Proxy::singleton().setClient(page);
+
+#ifdef ENABLE_AVE
     AVESupport::setClient(page);
+#endif
+
     WKBundlePageLoaderClientV1 client {
         {1, clientInfo},
         // Version 0.
@@ -215,7 +229,10 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
 
     WKBundlePageSetPolicyClient(page, &policyClient.base);
 
+#ifdef ENABLE_AVE
     AVESupport::didCreatePage(page);
+#endif
+
 }
 
 void willDestroyPage(WKBundleRef, WKBundlePageRef page, const void*)
@@ -246,10 +263,12 @@ void didReceiveMessageToPage(WKBundleRef,
         return;
     }
 
+#ifdef ENABLE_AVE
     if (AVESupport::didReceiveMessageToPage(messageName, messageBody))
     {
         return;
     }
+#endif
 
 #ifdef ENABLE_AAMP_JSBINDING
     if (AAMPJSController::didReceiveMessageToPage(messageName, messageBody))
