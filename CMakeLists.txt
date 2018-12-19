@@ -56,6 +56,8 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
 include_directories(${GLIB_INCLUDE_DIRS})
 
+pkg_check_modules(JSC QUIET wpe-javascriptcore)
+
 set(IARM_INCLUDES
   "-I=/usr/include/rdk/iarmmgrs/sysmgr  -I=/usr/include/rdk/iarmbus"
 )
@@ -94,7 +96,7 @@ if(USE_INTELCE)
   add_definitions(-DUSE_INTELCE=1)
 endif()
 
-target_link_libraries(ComcastInjectedBundle "${GLIB_LIBRARIES}" -ljansson -lWPEWebKit -lrdkat -lIARMBus -lcurl -lssl)
+target_link_libraries(ComcastInjectedBundle "${GLIB_LIBRARIES}" "${JSC_LIBRARIES}" -ljansson -lWPEWebKit -lrdkat -lIARMBus -lcurl -lssl)
 
 install(TARGETS ComcastInjectedBundle LIBRARY DESTINATION lib)
 install(FILES *.js DESTINATION share/injectedbundle)
