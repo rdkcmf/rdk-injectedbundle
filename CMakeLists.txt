@@ -27,6 +27,7 @@ set(ComcastInjectedBundle_SOURCES
       WebFilter.cpp
       RequestHeaders.cpp
       AccessibilitySupport.cpp
+      NavMetrics.cpp
     )
 
 if(ENABLE_AVE)
