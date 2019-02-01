@@ -29,6 +29,7 @@
 #ifdef ENABLE_AAMP_JSBINDING
 #include "AAMPJSController.h"
 #endif
+#include "NavMetrics.h"
 
 #include "logger.h"
 #include "utils.h"
@@ -149,6 +150,11 @@ bool shouldGoToBackForwardListItem(WKBundlePageRef, WKBundleBackForwardListItemR
     return true;
 }
 
+static void didHandleOnloadEventsForFrame(WKBundlePageRef page, WKBundleFrameRef frame, const void *)
+{
+    NavMetrics::didHandleOnloadEventsForFrame(page, frame);
+}
+
 WKURLRequestRef willSendRequestForFrame(WKBundlePageRef page, WKBundleFrameRef, uint64_t, WKURLRequestRef request, WKURLResponseRef, const void*)
 {
     if (filterRequest(page, request))
@@ -192,7 +198,7 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
         nullptr, // didClearWindowObjectForFrame;
         nullptr, // didCancelClientRedirectForFrame;
         nullptr, // willPerformClientRedirectForFrame;
-        nullptr, // didHandleOnloadEventsForFrame;
+        didHandleOnloadEventsForFrame,
 
         // Version 1.
         nullptr, // didLayoutForFrame
@@ -276,6 +282,11 @@ void didReceiveMessageToPage(WKBundleRef,
         return;
     }
 #endif
+
+    if (NavMetrics::didReceiveMessageToPage(page, messageName, messageBody))
+    {
+        return;
+    }
 
     JSBridge::Proxy::singleton().onMessageFromClient(page, messageName, messageBody);
 }
