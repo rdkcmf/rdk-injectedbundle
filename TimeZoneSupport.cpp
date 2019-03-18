@@ -207,7 +207,8 @@ void parseResults(const VectorOfMaps& m_upnpList)
     string newTimeZone = "null";
 
     VectorOfMaps::const_iterator newTz = find_if(m_upnpList.cbegin(), m_upnpList.cend(), [] (const StringHash& hash){
-            return hash.find("timezone") != hash.end();
+        const auto tzIter = hash.find("timezone");
+        return tzIter != hash.end() && !tzIter->second.empty();
         });
 
     if (newTz != m_upnpList.end()) {
@@ -215,7 +216,7 @@ void parseResults(const VectorOfMaps& m_upnpList)
         newTimeZone = newTz->at("timezone");
     }
 
-    if (oldTimeZone != newTimeZone)
+    if ((oldTimeZone != newTimeZone) && (!newTimeZone.empty()))
     {
         oldTimeZone = newTimeZone;
         RDKLOG_WARNING("Time zone updated: %s", oldTimeZone.c_str());
