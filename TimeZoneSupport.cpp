@@ -32,6 +32,7 @@
 #include <unordered_map>
 #include <string.h>
 #include <glib.h>
+#include <fstream>
 
 using namespace std;
 
@@ -222,6 +223,39 @@ void parseResults(const VectorOfMaps& m_upnpList)
         RDKLOG_WARNING("Time zone updated: %s", oldTimeZone.c_str());
         timeZoneUpdated(newTimeZone);
     }
+
+    if((newTimeZone.compare("null")==0) && (oldTimeZone.compare("null")==0))
+    {
+        RDKLOG_WARNING("GRAM mode device. So no TZ info from xupnp");
+        std::ifstream fileStream("/opt/persistent/timeZoneDST");
+        if (!fileStream.is_open())
+        {
+            RDKLOG_WARNING("Not able to open timeZoneDST file");
+            return;
+        }
+
+        std::string tzName;
+        if (std::getline(fileStream, tzName) && (!tzName.empty()))
+        {
+                //TZ setting as per https://www.gnu.org/software/libc/manual/html_node/TZ-Variable.html#
+            string timeZone = ":"+ tzName;
+            string *data = new string(timeZone);
+            g_timeout_add(0, [](void* data) -> gboolean {
+                    string* timeZoneData = static_cast<string*>(data);
+                    RDKLOG_INFO("Setting timezone: %s", timeZoneData->c_str());
+                    setenv("TZ", timeZoneData->c_str(), 1);
+                    delete timeZoneData;
+                    return G_SOURCE_REMOVE;
+            }, data);
+        }
+        else
+        {
+            RDKLOG_WARNING("Timezone File read is failed");
+        }
+
+        fileStream.close();
+     }
+
     RDKLOG_TRACE("upnp results updated");
 }
 
