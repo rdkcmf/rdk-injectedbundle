@@ -53,7 +53,7 @@ window.ServiceManager = {};
 //
 window.ServiceManager.generateMethod = function (objectName, methodName)
 {
-    console.log("Generating method '" + objectName + "::" + methodName + "()");
+    // console.log("Generating method '" + objectName + "::" + methodName + "()");
 
     function generateObject(objectName)
     {
@@ -141,7 +141,7 @@ window.ServiceManager.generateMethod = function (objectName, methodName)
             'argv': argv
         });
 
-        console.log(message);
+        // console.log(message);
 
         window.ServiceManager.sendQuery({
             request: message,
