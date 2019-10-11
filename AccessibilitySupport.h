@@ -21,7 +21,7 @@
 
 #include <WebKit/WKBundlePage.h>
 
-void passAccessibilitySettingsToRDKAT(WKTypeRef);
-void setPageMediaVolume(void *page, float volume, bool restore);
+void passAccessibilitySettingsToRDKAT(WKBundlePageRef, WKTypeRef);
+void setPageMediaVolume(void *page, float volume);
 
 #endif // ACCESSIBILITYSUPPORT_H

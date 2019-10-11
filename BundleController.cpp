@@ -38,6 +38,7 @@
 #include <WebKit/WKBundleBackForwardListItem.h>
 #include <WebKit/WKBundlePage.h>
 #include <WebKit/WKBundleFrame.h>
+#include <WebKit/WKBundlePagePrivate.h>
 #include <WebKit/WKBundlePageLoaderClient.h>
 #include <WebKit/WKRetainPtr.h>
 #include <WebKit/WKURL.h>
@@ -46,31 +47,6 @@
 
 namespace
 {
-
-void setPageMediaVolume(void *page, float volume, bool restore)
-{
-    static double tVolume = 0.0;
-    if(page) {
-        double t = WKBundlePageGetVolume((WKBundlePageRef)page);
-        RDKLOG_INFO("Read mediaVolume is : %lf", t);
-
-        if(!restore) {
-            // Backup the original volume, if not done already
-            if(tVolume == 0)
-                tVolume = t;
-        } else {
-            // Revert back to the original volume (ignore the "volume" param)
-            volume = tVolume;
-            tVolume = 0;
-        }
-
-        if(volume == t)
-            return;
-
-        RDKLOG_INFO("setMediaVolume to : %lf", volume);
-        WKBundlePageSetVolume((WKBundlePageRef)page, volume);
-    }
-}
 
 bool shouldInjectBindings(WKURLRef url)
 {
@@ -123,8 +99,11 @@ void didCommitLoad(WKBundlePageRef page,
     std::string url = Utils::toStdString(wkUrlStr.get());
 
     // Notify RDK_AT about the URL change so that a session will be created
-    if(WKBundlePageGetMainFrame(page) == frame)
+    if(WKBundlePageGetMainFrame(page) == frame) {
+        if(url.find("about:blank") != std::string::npos || url.find("player-platform") != std::string::npos)
+            WKAccessibilityEnableAccessibility(page, false);
         RDK_AT::NotifyURLChange(url, setPageMediaVolume, (void*)page);
+    }
 
     if (!shouldInjectBindings(wkUrl.get()))
     {
@@ -265,7 +244,7 @@ void didReceiveMessageToPage(WKBundleRef,
 
     if (WKStringIsEqualToUTF8CString(messageName, "accessibility_settings"))
     {
-        passAccessibilitySettingsToRDKAT(messageBody);
+        passAccessibilitySettingsToRDKAT(page, messageBody);
         return;
     }
 

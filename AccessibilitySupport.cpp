@@ -26,9 +26,10 @@
 #include <WebKit/WKArray.h>
 #include <WebKit/WKNumber.h>
 #include <WebKit/WKString.h>
+#include <WebKit/WKBundlePagePrivate.h>
 
 #include <cassert>
-
+#include <unistd.h>
 #include <rdkat.h>
 
 #define CHECK_CONDITION(condition, log) \
@@ -40,37 +41,25 @@ do { \
     } \
 } while(0)
 
-void setPageMediaVolume(void *page, float volume, bool restore)
+void setPageMediaVolume(void *page, float volume)
 {
-    static double tVolume = 0.0;
     if(page) {
-        double t = WKBundlePageGetVolume((WKBundlePageRef)page);
-        RDKLOG_INFO("Read mediaVolume is : %lf", t);
-
-        if(!restore) {
-            // Backup the original volume, if not done already
-            if(tVolume == 0)
-                tVolume = t;
-        } else {
-            // Revert back to the original volume (ignore the "volume" param)
-            volume = tVolume;
-            tVolume = 0;
-        }
-
-        if(volume == t)
+        double readVolume = WKBundlePageGetVolume((WKBundlePageRef)page);
+        RDKLOG_INFO("read MediaVolume : %lf, volume to be set : %lf", readVolume, volume);
+        if(volume == readVolume)
             return;
 
-        RDKLOG_INFO("setMediaVolume to : %lf", volume);
+        RDKLOG_INFO("set MediaVolume to : %lf", volume);
         WKBundlePageSetVolume((WKBundlePageRef)page, volume);
     }
 }
 
-void passAccessibilitySettingsToRDKAT(WKTypeRef accessibilitySettingsRef)
+void passAccessibilitySettingsToRDKAT(WKBundlePageRef page, WKTypeRef accessibilitySettingsRef)
 {
     CHECK_CONDITION(WKGetTypeID(accessibilitySettingsRef) == WKArrayGetTypeID(), "accessibility_settings is not an array");
     WKArrayRef array = static_cast<WKArrayRef>(accessibilitySettingsRef);
     size_t arraySize = array ? WKArrayGetSize(array) : 0;
-    CHECK_CONDITION(arraySize == 5, "incorrect params's size");
+    CHECK_CONDITION(arraySize == 6, "incorrect params's size");
 
     struct RDK_AT::TTSConfiguration config;
     config.m_ttsEndPoint = Utils::toStdString((WKStringRef) WKArrayGetItemAtIndex(array, 0));
@@ -78,10 +67,18 @@ void passAccessibilitySettingsToRDKAT(WKTypeRef accessibilitySettingsRef)
     config.m_language = Utils::toStdString((WKStringRef) WKArrayGetItemAtIndex(array, 2));
     config.m_rate = (uint8_t)WKUInt64GetValue((WKUInt64Ref)(WKArrayGetItemAtIndex(array, 3)));
     bool enableVoiceGuidance = WKBooleanGetValue((WKBooleanRef)(WKArrayGetItemAtIndex(array, 4)));
-    RDKLOG_INFO("accessibility_settings ttsEndPoint=%s, ttsEndPointSecured=%s, language=%s, rate=%d, enableVoiceGuidance=%d.",
-            config.m_ttsEndPoint.c_str(),config.m_ttsEndPointSecured.c_str(),config.m_language.c_str(),config.m_rate,enableVoiceGuidance);
+    std::string mode = Utils::toStdString((WKStringRef) WKArrayGetItemAtIndex(array, 5));
 
-    RDK_AT::EnableVoiceGuidance(enableVoiceGuidance);
+    if(access("/tmp/speech_synthesis", F_OK) == 0)
+        mode = "synthesis";
+    else if(mode.empty())
+        mode = "accessibility";
+
+    RDKLOG_INFO("accessibility_settings ttsEndPoint=%s, ttsEndPointSecured=%s, language=%s, rate=%d, enableVoiceGuidance=%d, mode=%s",
+            config.m_ttsEndPoint.c_str(),config.m_ttsEndPointSecured.c_str(),config.m_language.c_str(),config.m_rate,enableVoiceGuidance, mode.c_str());
+
+    WKAccessibilityEnableAccessibility(page, (mode == "accessibility") && enableVoiceGuidance);
+    RDK_AT::EnableVoiceGuidance(enableVoiceGuidance, mode);
     RDK_AT::ConfigureTTS(config);
 }
 
