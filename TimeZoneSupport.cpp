@@ -191,6 +191,7 @@ void timeZoneUpdated(string newZone)
 
                 RDKLOG_INFO("Setting new timezone: %s", newZone->c_str());
                 setenv("TZ", newZone->c_str(), 1);
+                tzset();
                 delete newZone;
                 return G_SOURCE_REMOVE;
             }, data);
@@ -244,6 +245,7 @@ void parseResults(const VectorOfMaps& m_upnpList)
                     string* timeZoneData = static_cast<string*>(data);
                     RDKLOG_INFO("Setting timezone: %s", timeZoneData->c_str());
                     setenv("TZ", timeZoneData->c_str(), 1);
+                    tzset();
                     delete timeZoneData;
                     return G_SOURCE_REMOVE;
             }, data);
