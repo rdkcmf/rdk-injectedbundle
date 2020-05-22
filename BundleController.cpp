@@ -247,6 +247,12 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
     AVESupport::didCreatePage(page);
 #endif
 
+#ifdef ENABLE_AAMP_JSBINDING
+    RDKLOG_INFO("BundleController::didCreatePage(): Calling AAMPJSController's didCreatePage");
+    AAMPJSController::didCreatePage(page);
+#endif
+
+
 }
 
 void willDestroyPage(WKBundleRef, WKBundlePageRef page, const void*)
