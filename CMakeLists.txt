@@ -96,7 +96,12 @@ if(USE_INTELCE)
   add_definitions(-DUSE_INTELCE=1)
 endif()
 
-target_link_libraries(ComcastInjectedBundle "${GLIB_LIBRARIES}" "${JSC_LIBRARIES}" -ljansson -lWPEWebKit -lrdkat -lIARMBus -lcurl -lssl)
+pkg_check_modules(WPE_WEBKIT QUIET wpe-webkit)
+if(NOT WPE_WEBKIT_FOUND)
+  pkg_check_modules(WPE_WEBKIT QUIET wpe-webkit-0.1)
+endif()
+
+target_link_libraries(ComcastInjectedBundle "${GLIB_LIBRARIES}" "${JSC_LIBRARIES}" -ljansson "${WPE_WEBKIT_LIBRARIES}" -lrdkat -lIARMBus -lcurl -lssl)
 
 install(TARGETS ComcastInjectedBundle LIBRARY DESTINATION lib)
 install(FILES *.js DESTINATION share/injectedbundle)
