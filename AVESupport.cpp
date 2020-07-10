@@ -272,21 +272,6 @@ void aveLogCallback(const char* prefix, const AVELogLevel level, const char* dat
     WKBundlePagePostMessage(s_wk.m_client, nameRef.get(), arrRef.get());
 }
 
-void injectUserScript(WKBundlePageRef page, const char* path)
-{
-    std::ifstream file;
-    file.open(path);
-    if (!file.is_open())
-        return;
-
-    std::string content;
-    content.assign((std::istreambuf_iterator<char>(file)),(std::istreambuf_iterator<char>()));
-    file.close();
-
-    WKRetainPtr<WKStringRef> str = adoptWK(WKStringCreateWithUTF8CString(content.c_str()));
-    WKBundlePageAddUserScript(page, str.get(), kWKInjectAtDocumentStart, kWKInjectInAllFrames);
-}
-
 void setAVELogLevel(uint64_t level)
 {
     RDKLOG_INFO("setAVELogLevel %d", (int)level);
@@ -332,12 +317,6 @@ void enable(bool on = true)
 bool enabled()
 {
     return s_wk.m_enabled;
-}
-
-void didCreatePage(WKBundlePageRef page)
-{
-    RDKLOG_INFO("");
-    injectUserScript(page, "/usr/share/injectedbundle/AVEXREReceiverBridge.js");
 }
 
 void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef frame)

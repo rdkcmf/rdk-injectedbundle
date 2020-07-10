@@ -57,6 +57,24 @@ namespace Utils {
 namespace
 {
 
+#if ENABLE_AVE || ENABLE_AAMP_JSBINDING
+static void injectUserScript(WKBundlePageRef page, const char* path)
+{
+    RDKLOG_INFO("");
+    std::ifstream file;
+    file.open(path);
+    if (!file.is_open())
+        return;
+
+    std::string content;
+    content.assign((std::istreambuf_iterator<char>(file)),(std::istreambuf_iterator<char>()));
+    file.close();
+
+    WKRetainPtr<WKStringRef> str = adoptWK(WKStringCreateWithUTF8CString(content.c_str()));
+    WKBundlePageAddUserScript(page, str.get(), kWKInjectAtDocumentStart, kWKInjectInAllFrames);
+}
+#endif
+
 bool shouldInjectBindings(WKURLRef url)
 {
     if (url == nullptr)
@@ -243,16 +261,9 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
 
     WKBundlePageSetPolicyClient(page, &policyClient.base);
 
-#ifdef ENABLE_AVE
-    AVESupport::didCreatePage(page);
+#if ENABLE_AVE || ENABLE_AAMP_JSBINDING
+    injectUserScript(page, "/usr/share/injectedbundle/XREReceiverBridge.js");
 #endif
-
-#ifdef ENABLE_AAMP_JSBINDING
-    RDKLOG_INFO("BundleController::didCreatePage(): Calling AAMPJSController's didCreatePage");
-    AAMPJSController::didCreatePage(page);
-#endif
-
-
 }
 
 void willDestroyPage(WKBundleRef, WKBundlePageRef page, const void*)
