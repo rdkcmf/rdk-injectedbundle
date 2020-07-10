@@ -59,29 +59,6 @@ void initialize()
     }
 }
 
-void injectUserScript(WKBundlePageRef page, const char* path)
-{
-    std::ifstream file;
-    RDKLOG_INFO("injectUserScript(): path: %s", path);
-    file.open(path);
-    if (!file.is_open())
-        return;
-
-    std::string content;
-    content.assign((std::istreambuf_iterator<char>(file)),(std::istreambuf_iterator<char>()));
-    file.close();
-
-    WKRetainPtr<WKStringRef> str = adoptWK(WKStringCreateWithUTF8CString(content.c_str()));
-    WKBundlePageAddUserScript(page, str.get(), kWKInjectAtDocumentStart, kWKInjectInAllFrames);
-}
-
-void didCreatePage(WKBundlePageRef page)
-{
-    RDKLOG_TRACE("AAMPJSController::didCreatePage()");
-    RDKLOG_INFO("AAMPJSController::didCreatePage(): Calling injectUserScript()");
-    injectUserScript(page, "/usr/share/injectedbundle/AAMPXREReceiverBridge.js");
-}
-
 void didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame)
 {
     RDKLOG_TRACE("AAMPJSController::didCommitLoad()");
