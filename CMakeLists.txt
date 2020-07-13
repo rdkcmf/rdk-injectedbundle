@@ -28,6 +28,8 @@ set(ComcastInjectedBundle_SOURCES
       RequestHeaders.cpp
       AccessibilitySupport.cpp
       NavMetrics.cpp
+      JavaScriptFunction.cpp
+      ClassDefinition.cpp
     )
 
 if(ENABLE_AVE)
@@ -52,6 +54,14 @@ set(ComcastInjectedBundle_SOURCES
 add_definitions(-DENABLE_AAMP_JSBINDING)
 endif()
 
+option(ENABLE_SECURITY_TOKEN "Include SecurityAgent" ON)
+if(ENABLE_SECURITY_TOKEN)
+ find_package(securityagent REQUIRED)
+ set(ComcastInjectedBundle_SOURCES
+       ${ComcastInjectedBundle_SOURCES}
+       SecurityAgent.cpp)
+endif()
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
 include_directories(${GLIB_INCLUDE_DIRS})
@@ -72,6 +82,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -Wall -Wextra -Werror ${IARM_
 add_library(ComcastInjectedBundle SHARED
     ${ComcastInjectedBundle_SOURCES}
 )
+
+set_property(TARGET ComcastInjectedBundle PROPERTY CXX_STANDARD 14)
+
+if(ENABLE_SECURITY_TOKEN)
+target_link_libraries(ComcastInjectedBundle
+    PRIVATE
+        securityagent::securityagent)
+endif()
 
 if(ENABLE_RDK_LOGGER)
   add_definitions(-DUSE_RDK_LOGGER)

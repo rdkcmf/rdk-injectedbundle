@@ -67,6 +67,8 @@ static inline JSValueRef evaluateUserScript(JSContextRef context, const std::str
     return JSEvaluateScript(context, str.get(), nullptr, nullptr, 0, exc);
 }
 
+std::string GetURL();
+
 } // namespace Utils
 
 #endif // UTILS_H

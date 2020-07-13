@@ -45,6 +45,15 @@
 
 #include <rdkat.h>
 
+#include "ClassDefinition.h"
+
+static std::string g_currentURL;
+namespace Utils {
+    std::string GetURL() {
+        return (g_currentURL);
+    }
+}
+
 namespace
 {
 
@@ -134,6 +143,19 @@ static void didHandleOnloadEventsForFrame(WKBundlePageRef page, WKBundleFrameRef
     NavMetrics::didHandleOnloadEventsForFrame(page, frame);
 }
 
+static void updateGlobalURL(WKBundleFrameRef frame)
+{
+    if (WKBundleFrameIsMainFrame(frame))
+    {
+        WKURLRef Url = WKBundleFrameCopyURL(frame);
+        WKStringRef urlString = WKURLCopyString(Url);
+        std::string urlStr = Utils::toStdString(urlString);
+        g_currentURL = urlStr.c_str();
+        WKRelease(urlString);
+        WKRelease(Url);
+    }
+}
+
 WKURLRequestRef willSendRequestForFrame(WKBundlePageRef page, WKBundleFrameRef, uint64_t, WKURLRequestRef request, WKURLResponseRef, const void*)
 {
     if (filterRequest(page, request))
@@ -165,7 +187,10 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
         nullptr, // didFailProvisionalLoadWithErrorForFrame;
         didCommitLoad, // didCommitLoadForFrame;
         nullptr, // didFinishDocumentLoadForFrame;
-        nullptr, // didFinishLoadForFrame;
+        // didFinishLoadForFrame;
+        [](WKBundlePageRef, WKBundleFrameRef frame, WKTypeRef*, const void*) {
+            updateGlobalURL(frame);
+        },
         nullptr, // didFailLoadWithErrorForFrame;
         nullptr, // didSameDocumentNavigationForFrame;
         nullptr, // didReceiveTitleForFrame;
@@ -174,7 +199,11 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
         nullptr, // didRemoveFrameFromHierarchy;
         nullptr, // didDisplayInsecureContentForFrame;
         nullptr, // didRunInsecureContentForFrame;
-        nullptr, // didClearWindowObjectForFrame;
+        // didClearWindowObjectForFrame;
+        [](WKBundlePageRef, WKBundleFrameRef frame, WKBundleScriptWorldRef scriptWorld, const void*) {
+            JSGlobalContextRef context = WKBundleFrameGetJavaScriptContextForWorld(frame, scriptWorld);
+            WPEFramework::JavaScript::injectJSClass(context);
+        },
         nullptr, // didCancelClientRedirectForFrame;
         nullptr, // willPerformClientRedirectForFrame;
         didHandleOnloadEventsForFrame,
