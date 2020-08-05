@@ -28,6 +28,12 @@
 #ifdef ENABLE_AAMP_JSBINDING
 #include "AAMPJSController.h"
 #endif
+#ifdef ENABLE_VIRTUAL_KEYBOARD
+#include "VirtualKeyboard.h"
+#endif
+#ifdef ENABLE_APP_SECRET
+#include "ApplicationSecret.h"
+#endif
 #include "logger.h"
 
 #include <WebKit/WKBundleInitialize.h>
@@ -50,5 +56,13 @@ extern "C" void WKBundleInitialize(WKBundleRef bundle, WKTypeRef initializationU
 
 #ifdef ENABLE_AAMP_JSBINDING
     AAMPJSController::initialize();
+#endif
+
+#ifdef ENABLE_VIRTUAL_KEYBOARD
+    VirtualKeyboard::initialize();
+#endif
+
+#ifdef ENABLE_APP_SECRET
+    ApplicationSecret::initialize();
 #endif
 }

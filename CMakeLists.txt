@@ -54,6 +54,22 @@ set(ComcastInjectedBundle_SOURCES
 add_definitions(-DENABLE_AAMP_JSBINDING)
 endif()
 
+if(ENABLE_VIRTUAL_KEYBOARD)
+set(ComcastInjectedBundle_SOURCES
+      ${ComcastInjectedBundle_SOURCES}
+      VirtualKeyboard.cpp
+    )
+add_definitions(-DENABLE_VIRTUAL_KEYBOARD)
+endif()
+
+if(ENABLE_APP_SECRET)
+set(ComcastInjectedBundle_SOURCES
+      ${ComcastInjectedBundle_SOURCES}
+      ApplicationSecret.cpp
+    )
+add_definitions(-DENABLE_APP_SECRET)
+endif()
+
 option(ENABLE_SECURITY_TOKEN "Include SecurityAgent" ON)
 if(ENABLE_SECURITY_TOKEN)
  find_package(securityagent REQUIRED)
