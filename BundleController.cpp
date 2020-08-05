@@ -30,6 +30,12 @@
 #include "AAMPJSController.h"
 #endif
 #include "NavMetrics.h"
+#ifdef ENABLE_VIRTUAL_KEYBOARD
+#include "VirtualKeyboard.h"
+#endif
+#ifdef ENABLE_APP_SECRET
+#include "ApplicationSecret.h"
+#endif
 
 #include "logger.h"
 #include "utils.h"
@@ -46,6 +52,8 @@
 #include <rdkat.h>
 
 #include "ClassDefinition.h"
+
+#define UNUSED(x) (void) x
 
 static std::string g_currentURL;
 namespace Utils {
@@ -189,6 +197,16 @@ static WKBundlePagePolicyAction decidePolicyForNavigationAction(WKBundlePageRef,
     return WKBundlePagePolicyActionUse;
 }
 
+static void didFocusTextField(WKBundlePageRef page, WKBundleNodeHandleRef, WKBundleFrameRef frame, const void*)
+{
+#if defined(ENABLE_VIRTUAL_KEYBOARD)
+    VirtualKeyboard::didFocusTextField(page, frame);
+#else
+    UNUSED(page);
+    UNUSED(frame);
+#endif
+}
+
 void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
 {
     JSBridge::Proxy::singleton().setClient(page);
@@ -260,6 +278,26 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
     };
 
     WKBundlePageSetPolicyClient(page, &policyClient.base);
+
+    WKBundlePageFormClientV2 formClient {
+        {2, clientInfo},
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        didFocusTextField,
+        nullptr,
+        nullptr
+    };
+
+    WKBundlePageSetFormClient(page, &formClient.base);
+
+#ifdef ENABLE_APP_SECRET
+    ApplicationSecret::didCreatePage(page);
+#endif
 
 #if ENABLE_AVE || ENABLE_AAMP_JSBINDING
     injectUserScript(page, "/usr/share/injectedbundle/XREReceiverBridge.js");
