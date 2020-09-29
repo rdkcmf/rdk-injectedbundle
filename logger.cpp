@@ -55,15 +55,16 @@ void log(LogLevel level,
         {RDK_LOG_FATAL, RDK_LOG_ERROR, RDK_LOG_WARN, RDK_LOG_INFO, RDK_LOG_DEBUG, RDK_LOG_TRACE1};
 
     const short kFormatMessageSize = 4096;
+    const short kFinalMessageSize = 5120; //(4 + 1)KB
     // RDKLogger is backed with log4c which has its own default level
     // for filtering messages. Therefore, we don't check level here.
     char userFormatted[kFormatMessageSize];
-    char finalFormatted[kFormatMessageSize];
+    char finalFormatted[kFinalMessageSize];
 
     va_list argptr;
     va_start(argptr, format);
     vsnprintf(userFormatted, kFormatMessageSize, format, argptr);
-    snprintf(finalFormatted, kFormatMessageSize, "%s:%s:%d %s", func,
+    snprintf(finalFormatted, kFinalMessageSize, "%s:%s:%d %s", func,
         basename(file),
         line,
         userFormatted);
