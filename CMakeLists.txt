@@ -28,7 +28,6 @@ set(ComcastInjectedBundle_SOURCES
       logger.cpp
       WebFilter.cpp
       RequestHeaders.cpp
-      AccessibilitySupport.cpp
       NavMetrics.cpp
       JavaScriptFunction.cpp
       ClassDefinition.cpp
@@ -140,7 +139,7 @@ if(NOT WPE_WEBKIT_FOUND)
   pkg_check_modules(WPE_WEBKIT QUIET wpe-webkit-0.1)
 endif()
 
-target_link_libraries(ComcastInjectedBundle "${GLIB_LIBRARIES}" "${JSC_LIBRARIES}" -ljansson "${WPE_WEBKIT_LIBRARIES}" -lrdkat "${IARM_LIBRARIES}" -lcurl -lssl)
+target_link_libraries(ComcastInjectedBundle "${GLIB_LIBRARIES}" "${JSC_LIBRARIES}" -ljansson "${WPE_WEBKIT_LIBRARIES}" "${IARM_LIBRARIES}" -lcurl -lssl)
 
 install(TARGETS ComcastInjectedBundle LIBRARY DESTINATION lib)
 install(FILES *.js DESTINATION share/injectedbundle)
