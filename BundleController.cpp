@@ -25,7 +25,6 @@
 
 #include "WebFilter.h"
 #include "RequestHeaders.h"
-#include "AccessibilitySupport.h"
 #ifdef ENABLE_AAMP_JSBINDING
 #include "AAMPJSController.h"
 #endif
@@ -49,8 +48,6 @@
 #include <WebKit/WKRetainPtr.h>
 #include <WebKit/WKURL.h>
 #include <WebKit/WKNumber.h>
-
-#include <rdkat.h>
 
 #include "ClassDefinition.h"
 
@@ -135,13 +132,6 @@ void didCommitLoad(WKBundlePageRef page,
     WKRetainPtr<WKURLRef> wkUrl = adoptWK(WKBundleFrameCopyURL(frame));
     WKRetainPtr<WKStringRef> wkUrlStr = adoptWK(WKURLCopyString(wkUrl.get()));
     std::string url = Utils::toStdString(wkUrlStr.get());
-
-    // Notify RDK_AT about the URL change so that a session will be created
-    if(WKBundlePageGetMainFrame(page) == frame) {
-        if(url.find("about:blank") != std::string::npos || url.find("player-platform") != std::string::npos)
-            WKAccessibilityEnableAccessibility(page, false);
-        RDK_AT::NotifyURLChange(url, setPageMediaVolume, (void*)page);
-    }
 
     if (!shouldInjectBindings(wkUrl.get()))
     {
@@ -309,7 +299,6 @@ void didCreatePage(WKBundleRef, WKBundlePageRef page, const void* clientInfo)
 
 void willDestroyPage(WKBundleRef, WKBundlePageRef page, const void*)
 {
-    RDK_AT::Uninitialize();
     removeWebFiltersForPage(page);
     removeRequestHeadersFromPage(page);
 }
@@ -326,12 +315,6 @@ void didReceiveMessageToPage(WKBundleRef,
     if (WKStringIsEqualToUTF8CString(messageName, "headers"))
     {
         setRequestHeadersToPage(page, messageBody);
-        return;
-    }
-
-    if (WKStringIsEqualToUTF8CString(messageName, "accessibility_settings"))
-    {
-        passAccessibilitySettingsToRDKAT(page, messageBody);
         return;
     }
 
@@ -381,7 +364,6 @@ void initialize(WKBundleRef bundleRef, WKTypeRef)
         didReceiveMessageToPage
     };
 
-    RDK_AT::Initialize();
     WKBundleSetClient(bundleRef, &client.base);
 }
 
