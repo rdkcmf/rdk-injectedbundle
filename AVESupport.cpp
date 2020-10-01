@@ -44,8 +44,6 @@
 
 #include <rdk/ds/manager.hpp>
 
-#include <sys/prctl.h>
-
 #ifdef USE_NX_CLIENT
 #include "nexus_config.h"
 #include "nxclient.h"
@@ -374,11 +372,6 @@ void onSetAVEEnabled(WKTypeRef messageBody)
     }
     bool enableAVE = WKBooleanGetValue((WKBooleanRef) messageBody);
     enable(enableAVE);
-
-    if (enableAVE)
-    {
-        prctl(PR_SET_NAME, "WPEIPVideo", 0, 0, 0);
-    }
 
     RDKLOG_INFO("AVE was %s", enableAVE ? "enabled" : "disabled");
 }
