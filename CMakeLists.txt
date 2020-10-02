@@ -18,6 +18,8 @@
 ##########################################################################
 cmake_minimum_required(VERSION 2.8)
 
+option(ENABLE_IARM "Enable IARM." ON)
+
 set(ComcastInjectedBundle_SOURCES
       InjectedBundleMain.cpp
       BundleController.cpp
@@ -38,12 +40,6 @@ if(ENABLE_AVE)
         AVESupport.cpp
       )
   add_definitions(-DENABLE_AVE)
-
-  #FIXME timezone support requires iARM, which is initialized in AVESupport.cpp
-  set(ComcastInjectedBundle_SOURCES
-        ${ComcastInjectedBundle_SOURCES}
-        TimeZoneSupport.cpp
-      )
 endif()
 
 if(ENABLE_AAMP_JSBINDING)
@@ -78,20 +74,29 @@ if(ENABLE_SECURITY_TOKEN)
        SecurityAgent.cpp)
 endif()
 
+if (ENABLE_IARM)
+  set(ComcastInjectedBundle_SOURCES
+    ${ComcastInjectedBundle_SOURCES}
+    TimeZoneSupport.cpp
+    )
+  set(IARM_INCLUDES
+    "-I=/usr/include/rdk/iarmmgrs/sysmgr  -I=/usr/include/rdk/iarmbus"
+    )
+  set(IARM_LIBRARIES
+    -lIARMBus
+    )
+  add_definitions(
+    -DUSE_UPNP_DISCOVERY=1
+    -DIARM_USE_DBUS=1
+    -DENABLE_IARM=1
+    )
+endif(ENABLE_IARM)
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
 include_directories(${GLIB_INCLUDE_DIRS})
 
 pkg_check_modules(JSC QUIET wpe-javascriptcore)
-
-set(IARM_INCLUDES
-  "-I=/usr/include/rdk/iarmmgrs/sysmgr  -I=/usr/include/rdk/iarmbus"
-)
-
-add_definitions(
-  -DUSE_UPNP_DISCOVERY=1
-  -DIARM_USE_DBUS=1
-)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -Wall -Wextra -Werror ${IARM_INCLUDES}  -z defs")
 
@@ -135,7 +140,7 @@ if(NOT WPE_WEBKIT_FOUND)
   pkg_check_modules(WPE_WEBKIT QUIET wpe-webkit-0.1)
 endif()
 
-target_link_libraries(ComcastInjectedBundle "${GLIB_LIBRARIES}" "${JSC_LIBRARIES}" -ljansson "${WPE_WEBKIT_LIBRARIES}" -lrdkat -lIARMBus -lcurl -lssl)
+target_link_libraries(ComcastInjectedBundle "${GLIB_LIBRARIES}" "${JSC_LIBRARIES}" -ljansson "${WPE_WEBKIT_LIBRARIES}" -lrdkat "${IARM_LIBRARIES}" -lcurl -lssl)
 
 install(TARGETS ComcastInjectedBundle LIBRARY DESTINATION lib)
 install(FILES *.js DESTINATION share/injectedbundle)
