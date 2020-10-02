@@ -37,7 +37,6 @@
 #include <fstream>
 #include <mutex>
 
-#include <curl/curl.h>
 #include <glib.h>
 #include <kernel/Callbacks.h>
 #include <psdk/PSDKEvents.h>
@@ -51,14 +50,6 @@
 #include "nexus_config.h"
 #include "nxclient.h"
 #endif
-
-extern "C" {
-
-#include <rdk/iarmbus/libIBus.h>
-#include <rdk/iarmbus/libIBusDaemon.h>
-#include <rdk/iarmbus/libIARMCore.h>
-
-}
 
 #ifndef DLL_PUBLIC
 #define DLL_PUBLIC __attribute__ ((visibility ("default")))
@@ -191,35 +182,32 @@ namespace AVESupport
 struct AVEWk
 {
     bool m_enabled;
-    bool m_IARMinitialized;
+    bool m_DSInitialized;
     WKBundlePageRef m_client;
     AVELogLevel m_logLevel;
 
-    AVEWk () : m_enabled(false), m_IARMinitialized(false), m_client(nullptr), m_logLevel(eWarning) {}
+    AVEWk () : m_enabled(false), m_DSInitialized(false), m_client(nullptr), m_logLevel(eWarning) {}
 
 } s_wk;
 
 
-bool initIARM()
+bool initDS()
 {
-    char Init_Str[] = "WPE_WEBKIT_PROCESS";
-    IARM_Bus_Init(Init_Str);
-    IARM_Bus_Connect();
     try
     {
         device::Manager::Initialize();
-        s_wk.m_IARMinitialized = true;
-        RDKLOG_INFO("initIARM succeded");
+        s_wk.m_DSInitialized = true;
+        RDKLOG_INFO("initDS succeded");
 
     }
     catch (...)
     {
         RDKLOG_ERROR("IARM: Failed to initialize device::Manager");
         // TODO: post corresponding error message to JavaScript console
-        s_wk.m_IARMinitialized = false;
+        s_wk.m_DSInitialized = false;
     }
 
-    return s_wk.m_IARMinitialized;
+    return s_wk.m_DSInitialized;
 }
 
 void aveLogCallback(const char* prefix, const AVELogLevel level, const char* data)
@@ -290,11 +278,9 @@ void installAVELoggingCallback()
 void initialize()
 {
     RDKLOG_INFO("");
-    curl_global_init(CURL_GLOBAL_ALL);
-    RDKLOG_INFO("using curl:%s", curl_version());
 
     setCCHandleDirectMode(true);
-    if (initIARM())
+    if (initDS())
     {
         enable(true);
     }
@@ -304,7 +290,7 @@ void enable(bool on = true)
 {
     if (on)
     {
-        if (!s_wk.m_IARMinitialized)
+        if (!s_wk.m_DSInitialized)
         {
             RDKLOG_ERROR("Can't enable AVE : IARM is not initialized");
             return;

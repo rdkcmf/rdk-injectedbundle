@@ -20,10 +20,9 @@
 
 #ifdef ENABLE_AVE
 #include "AVESupport.h"
-
-//FIXME remove dependency on iARM (initialization)
-#include "TimeZoneSupport.h"
 #endif
+
+#include "TimeZoneSupport.h"
 
 #ifdef ENABLE_AAMP_JSBINDING
 #include "AAMPJSController.h"
@@ -41,16 +40,44 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <curl/curl.h>
+
+#ifdef ENABLE_IARM
+
+extern "C" {
+
+#include <rdk/iarmbus/libIBus.h>
+#include <rdk/iarmbus/libIBusDaemon.h>
+#include <rdk/iarmbus/libIARMCore.h>
+
+}
+
+static void initIARM() {
+    char Init_Str[] = "WPE_WEBKIT_PROCESS";
+    IARM_Bus_Init(Init_Str);
+    IARM_Bus_Connect();
+}
+
+#endif
+
 extern "C" void WKBundleInitialize(WKBundleRef bundle, WKTypeRef initializationUserData)
 {
     RDK::logger_init();
+
+    curl_global_init(CURL_GLOBAL_ALL);
+    RDKLOG_INFO("using curl:%s", curl_version());
+
+#ifdef ENABLE_IARM
+    initIARM();
+#endif
 
     JSBridge::initialize(bundle, initializationUserData);
 
 #ifdef ENABLE_AVE
     AVESupport::initialize();
+#endif
 
-    //FIXME remove dependency on AVE (for iARM initilization)
+#ifdef ENABLE_IARM
     TimeZoneSupport::initialize();
 #endif
 
