@@ -48,10 +48,13 @@
 #include <WebKit/WKBundlePageLoaderClient.h>
 #include <WebKit/WKRetainPtr.h>
 #include <WebKit/WKURL.h>
+#include <WebKit/WKNumber.h>
 
 #include <rdkat.h>
 
 #include "ClassDefinition.h"
+
+#include <sys/prctl.h>
 
 #define UNUSED(x) (void) x
 
@@ -330,6 +333,14 @@ void didReceiveMessageToPage(WKBundleRef,
     {
         passAccessibilitySettingsToRDKAT(page, messageBody);
         return;
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "setAVEEnabled"))
+    {
+        if (WKGetTypeID(messageBody) == WKBooleanGetTypeID() && WKBooleanGetValue((WKBooleanRef) messageBody))
+        {
+            prctl(PR_SET_NAME, "WPEIPVideo", 0, 0, 0);
+        }
     }
 
 #ifdef ENABLE_AVE
