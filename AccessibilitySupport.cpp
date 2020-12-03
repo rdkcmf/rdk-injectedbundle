@@ -79,6 +79,8 @@ void passAccessibilitySettingsToRDKAT(WKBundlePageRef page, WKTypeRef accessibil
 
     WKAccessibilityEnableAccessibility(page, (mode == "accessibility") && enableVoiceGuidance);
     RDK_AT::EnableVoiceGuidance(enableVoiceGuidance, mode);
-    RDK_AT::ConfigureTTS(config);
+
+    if(enableVoiceGuidance)
+        RDK_AT::ConfigureTTS(config);
 }
 
