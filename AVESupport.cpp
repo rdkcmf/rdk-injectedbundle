@@ -169,7 +169,7 @@ extern "C"
 
     void loadAVEJavaScriptBindings(void* context);
     void unloadAVEJavaScriptBindings(void* context);
-    void setAccessSessionToken(const char* token);
+    void setComcastSessionToken(const char* token);
     void setCCHandleDirectMode(bool on);
     void setPSDKLoggingCallback(loggerCallback cbLogger, const AVELogLevel level);
 }
@@ -348,7 +348,7 @@ void onSetAVESessionToken(WKTypeRef messageBody)
     RDKLOG_INFO("Got session token.");
     RDKLOG_TRACE("Token=%s", token.c_str());
 
-    setAccessSessionToken(token.c_str());
+    setComcastSessionToken(token.c_str());
 
     // Stop memory pressure handler for tune
     static int gResumePressureHandlerTag = 0;
