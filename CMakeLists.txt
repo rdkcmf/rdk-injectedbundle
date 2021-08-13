@@ -73,6 +73,11 @@ if(ENABLE_SECURITY_TOKEN)
        SecurityAgent.cpp)
 endif()
 
+option(ENABLE_IPSTB "Enable IPSTB profile." OFF)
+if (ENABLE_IPSTB)
+        add_definitions(-DENABLE_IPSTB=1)
+endif()
+
 if (ENABLE_IARM)
   set(ComcastInjectedBundle_SOURCES
     ${ComcastInjectedBundle_SOURCES}

@@ -23,7 +23,13 @@
 #include "sysMgr.h"
 #include <libIBus.h>
 #include <libIARMCore.h>
-#include <xdiscovery.h>
+
+#ifndef ENABLE_IPSTB
+  #include <xdiscovery.h>
+#else
+   #define _IARM_XUPNP_NAME                            "XUPnP"
+   #define  IARM_BUS_XUPNP_API_GetXUPNPDeviceInfo      "GetXUPNPDeviceInfo"
+#endif
 
 #include "logger.h"
 #include <algorithm>
