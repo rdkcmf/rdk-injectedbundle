@@ -167,31 +167,14 @@ VectorOfMaps jsonToListOfMaps(const char* upnpResults)
 
 void timeZoneUpdated(string newZone)
 {
-    string tzOut;
     string timeZone(newZone);
-    if(timeZone.compare("US/Eastern")==0)
-        tzOut = "EST05EDT";
-    else if(timeZone.compare("US/Central")==0)
-        tzOut = "CST06CDT";
-    else if(timeZone.compare("US/Mountain")==0)
-        tzOut = "MST07MDT";
-    else if(timeZone.compare("US/Pacific")==0)
-        tzOut = "PST08PDT";
-    else if(timeZone.compare("US/Alaska")==0)
-        tzOut = "AKST09AKDT";
-    else if(timeZone.compare("US/Hawaii")==0)
-        tzOut = "HST11HDT";
-    else if(timeZone.compare("US/Arizona")==0)
-        tzOut = "MST07";
-    else if(timeZone.compare("null") != 0 && timeZone.length() > 0)//just in case its already in correct format
-        tzOut = timeZone;
 
-    RDKLOG_INFO("timeZoneUpdated timeZone in=%s out=%s", timeZone.c_str(), tzOut.c_str());
+    RDKLOG_INFO("timeZoneUpdated timeZone=%s", timeZone.c_str());
 
-    if(tzOut.length() > 0)
+    if(timeZone.length() > 0)
     {
-        RDKLOG_WARNING("TZ set to %s", tzOut.c_str());
-        string *data = new string(tzOut);
+        RDKLOG_WARNING("TZ set to %s", timeZone.c_str());
+        string *data = new string(timeZone);
         g_timeout_add(0, [](void* data) -> gboolean {
                 string* newZone = static_cast<string*>(data);
 
