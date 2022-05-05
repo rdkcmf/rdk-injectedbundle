@@ -27,6 +27,8 @@ void initialize();
 
 void didCommitLoad(WKBundlePageRef page, WKBundleFrameRef frame);
 
+void SetHttpHeaders(const char * headerJson);
+
 void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef frame);
 
 bool didReceiveMessageToPage(WKStringRef messageName, WKTypeRef messageBody);

@@ -43,6 +43,12 @@ do { \
     } \
 } while(0)
 
+#if defined(ENABLE_AAMP_JSBINDING)
+#include <jansson.h>
+#include "AAMPJSController.h"
+void SetHeaderToAamp(const  std::vector<std::pair<std::string, std::string>> & headers);
+#endif
+
 namespace
 {
 
@@ -75,6 +81,9 @@ void setRequestHeadersToPage(WKBundlePageRef page, WKTypeRef headersRef)
     }
 
     RDKLOG_INFO("page [%p]: %u headers set", page, size);
+#if defined(ENABLE_AAMP_JSBINDING)
+    SetHeaderToAamp(headers);
+#endif
     if (headers.empty())
         removeRequestHeadersFromPage(page);
     else
@@ -86,6 +95,33 @@ void removeRequestHeadersFromPage(WKBundlePageRef page)
     RDKLOG_INFO("page: %p", page);
     s_pageHeaders.erase(page);
 }
+
+#if defined(ENABLE_AAMP_JSBINDING)
+void SetHeaderToAamp(const  std::vector<std::pair<std::string, std::string>> & headers)
+{
+    if(headers.empty())
+    {
+         AAMPJSController::SetHttpHeaders("");
+    }
+    else
+    {
+        char *jsonString = NULL;
+        json_t *json_arr = json_array();
+        for (unsigned int i = 0; i <= headers.size() - 1; i++)
+        {
+                json_t *root = json_object();
+                json_object_set(root,"name",json_string(headers[i].first.c_str()));
+                json_object_set(root,"value",json_string(headers[i].second.c_str()));
+                json_array_append( json_arr, root );
+                json_decref(root);
+        }
+        jsonString = json_dumps(json_arr, 0);
+        AAMPJSController::SetHttpHeaders(jsonString);
+        json_decref(json_arr);
+        free(jsonString);
+    }
+}
+#endif
 
 void applyRequestHeaders(WKBundlePageRef page, WKURLRequestRef requestRef)
 {

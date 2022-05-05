@@ -37,6 +37,7 @@ extern "C"
 {
     void aamp_LoadJSController(JSGlobalContextRef context);
     void aamp_UnloadJSController(JSGlobalContextRef context);
+    void aamp_SetPageHttpHeaders(const char* headers);
 }
 
 namespace AAMPJSController
@@ -85,6 +86,11 @@ void didStartProvisionalLoadForFrame(WKBundlePageRef page, WKBundleFrameRef fram
         RDKLOG_INFO("AAMPJSController::didStartProvisionalLoadForFrame(): Unloading JSController");
         aamp_UnloadJSController(context);
     }
+}
+
+void SetHttpHeaders(const char * headerJson)
+{
+    aamp_SetPageHttpHeaders(headerJson);
 }
 
 bool didReceiveMessageToPage(WKStringRef messageName, WKTypeRef messageBody)
